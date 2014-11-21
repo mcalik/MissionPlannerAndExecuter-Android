@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TableLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:paddingTop="0dip" android:layout_gravity="top" >
+
+    <TableRow
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textAppearance="?android:attr/textAppearanceLarge"
+            android:text="name"
+            android:id="@+id/missionName"
+            android:layout_column="1"
+            android:layout_marginTop="5dp"
+            android:layout_marginLeft="10dp" />
+    </TableRow>
+
+    <TableRow
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textAppearance="?android:attr/textAppearanceSmall"
+            android:text="date"
+            android:id="@+id/missionDate"
+            android:layout_column="1"
+            android:layout_marginTop="5dp"
+            android:layout_marginLeft="10dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textAppearance="?android:attr/textAppearanceSmall"
+            android:text="missionLat"
+            android:id="@+id/missionLat"
+            android:layout_column="3"
+            android:layout_marginTop="5dp"
+            android:layout_marginLeft="10dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textAppearance="?android:attr/textAppearanceSmall"
+            android:text="missionLon"
+            android:id="@+id/missionLon"
+            android:layout_column="6"
+            android:layout_marginTop="5dp"
+            android:layout_marginLeft="10dp" />
+    </TableRow>
+
+</TableLayout>
