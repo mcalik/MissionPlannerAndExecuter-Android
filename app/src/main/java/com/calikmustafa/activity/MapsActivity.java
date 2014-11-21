@@ -1,4 +1,4 @@
-package com.calikmustafa.mpe;
+package com.calikmustafa.activity;
 
 import android.os.Bundle;
 import android.support.v4.app.FragmentActivity;
@@ -8,6 +8,7 @@ import android.widget.Button;
 
 import com.calikmustafa.common.Functions;
 import com.calikmustafa.model.Mission;
+import com.calikmustafa.mpe.R;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.SupportMapFragment;

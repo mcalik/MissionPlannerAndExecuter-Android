@@ -27,10 +27,10 @@
             android:value="AIzaSyC4fxzn1k89PhLuI7o7DvQKx0jMoCgjyEM" />
 
         <activity
-            android:name="com.calikmustafa.mpe.MapsActivity"
+            android:name="com.calikmustafa.activity.MapsActivity"
             android:label="@string/title_activity_maps"></activity>
         <activity
-            android:name="com.calikmustafa.mpe.MainActivity"
+            android:name="com.calikmustafa.activity.MainActivity"
             android:label="@string/title_activity_main">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

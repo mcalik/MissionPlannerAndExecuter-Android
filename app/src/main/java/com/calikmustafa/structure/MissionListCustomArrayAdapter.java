@@ -11,7 +11,7 @@ import android.widget.BaseAdapter;
 import android.widget.TextView;
 
 import com.calikmustafa.model.Mission;
-import com.calikmustafa.mpe.MainActivity;
+import com.calikmustafa.activity.MainActivity;
 import com.calikmustafa.mpe.R;
 
 import java.util.ArrayList;

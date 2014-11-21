@@ -1,15 +1,11 @@
-package com.calikmustafa.mpe;
+package com.calikmustafa.activity;
 
 import android.app.Activity;
-import android.app.ListActivity;
 import android.app.ProgressDialog;
 import android.content.Intent;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
-import android.view.View;
-import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -17,6 +13,7 @@ import android.widget.Toast;
 import com.calikmustafa.common.Functions;
 import com.calikmustafa.model.Mission;
 import com.calikmustafa.model.Soldier;
+import com.calikmustafa.mpe.R;
 import com.calikmustafa.structure.JSONParser;
 import com.calikmustafa.structure.MissionListCustomArrayAdapter;
 
@@ -27,11 +24,11 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.lang.reflect.Method;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
+
+//known issues
+//ekranı çevirince yeniden login olma sorunu
 
 
 public class MainActivity extends Activity {
@@ -192,14 +189,14 @@ public class MainActivity extends Activity {
                                 mission.setName(mission.getName()+"(L)");
                             missionList.add(mission);
 
-                            SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
+        /*                    SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
 //format çevirilecek, web servisteki getMission sorgusuna Location parametresi eklenecek ve location tablosuna state kolonu eklenecek!!
                             try {
                                 Date dd = dateFormat.parse(mission.getTime());
                             } catch (ParseException e) {
                                 e.printStackTrace();
                             }
-
+*/
                             Log.d(mission.toString(),"");
                         }
                     } else
