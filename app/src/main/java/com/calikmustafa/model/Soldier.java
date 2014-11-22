@@ -26,6 +26,10 @@ public class Soldier implements Serializable {
         this.rank = rank;
     }
 
+    public Soldier(String name) {
+        this.name = name;
+    }
+
     public Soldier() {
     }
 

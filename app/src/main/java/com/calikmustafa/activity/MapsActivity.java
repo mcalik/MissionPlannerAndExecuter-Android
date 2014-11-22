@@ -1,31 +1,56 @@
 package com.calikmustafa.activity;
 
+import android.app.AlertDialog;
+import android.app.Dialog;
+import android.content.DialogInterface;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v4.app.FragmentActivity;
+import android.util.Log;
+import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
 import android.widget.Button;
 
 import com.calikmustafa.common.Functions;
 import com.calikmustafa.model.Mission;
+import com.calikmustafa.model.Soldier;
+import com.calikmustafa.model.Team;
 import com.calikmustafa.mpe.R;
+import com.calikmustafa.structure.JSONParser;
+import com.calikmustafa.structure.MissionListCustomArrayAdapter;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLng;
-import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
-import com.google.android.gms.tagmanager.Container;
+
+import org.apache.http.NameValuePair;
+import org.apache.http.message.BasicNameValuePair;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class MapsActivity extends FragmentActivity {
+    JSONParser jParser = new JSONParser();
+    private static String url_team = "http://www.calikmustafa.com/senior/getTeam.php";
+    private static final String TAG_SUCCESS = "success";
+    JSONArray teamJSON = null;
 
     private GoogleMap mMap; // Might be null if Google Play services APK is not available.
     private Mission mission;
+    private Team team;
+    private ArrayList<Soldier> teamList;
+
     private Button showDetails;
     private Button showTeamMembers;
     private Button functionalButton;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -35,6 +60,17 @@ public class MapsActivity extends FragmentActivity {
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);
         mission = (Mission) getIntent().getSerializableExtra("mission");
         setContentView(R.layout.activity_maps);
+
+        new FetchTeamList().execute(mission.getTeamID()+"");
+
+        showTeamMembers.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Dialog d = new Dialog(getApplicationContext());
+                d.show();
+            }
+        });
+
         setUpMapIfNeeded();
         showDetails = (Button) findViewById(R.id.showMissionDetailsButton);
         showTeamMembers = (Button) findViewById(R.id.showTeamButton);
@@ -44,6 +80,18 @@ public class MapsActivity extends FragmentActivity {
         else
             functionalButton.setText("Ready");
 
+    }
+
+    //saçma sapan kod yazmışım mk
+    @Deprecated
+    private String[] getTeamListString() {
+        String[] soldierNames = new String[team.getTeamList().size()];
+        for (int i=0; i< team.getTeamList().size();i++) {
+            soldierNames[i] = team.getTeamList().get(i).getName();
+            if (team.getTeamList().get(i).getId() == team.getLeader().getId())
+                soldierNames[i]+="(L)";
+        }
+        return soldierNames;
     }
 
     @Override
@@ -101,4 +149,67 @@ public class MapsActivity extends FragmentActivity {
         mMap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
 
     }
+
+    class FetchTeamList extends AsyncTask<String, String, String> {
+
+
+        protected String doInBackground(String... args) {
+            // Building Parameters
+            List<NameValuePair> params = new ArrayList<NameValuePair>();
+            params.add(new BasicNameValuePair("team_id", args[0]));
+
+            // getting JSON string from URL
+            JSONObject json = jParser.makeHttpRequest(url_team, "GET", params);
+
+            // Check your log cat for JSON reponse
+            Log.d("team: ", json.toString());
+
+            try {
+                // Checking for SUCCESS TAG
+                int success = json.getInt(TAG_SUCCESS);
+
+                if (success == 1) {
+                    Soldier soldier;
+                    Soldier leader;
+                    teamJSON = json.getJSONArray("team");
+                    teamList = new ArrayList<Soldier>();
+
+                    if (teamJSON.length() >0) {
+                        JSONObject teamObject = teamJSON.getJSONObject(0);
+                        JSONArray teamListArray = teamObject.getJSONArray("soldierList");
+
+                        //get soldier list
+                        for(int i = 0 ; i< teamListArray.length();i++){
+                            JSONObject soldierObject = teamListArray.getJSONObject(i);
+                            soldier = new Soldier(soldierObject.getInt("id"),soldierObject.getString("soldierName"),soldierObject.getString("rankName"));
+                            teamList.add(soldier);
+                        }
+
+                        //get leader
+                        JSONArray leaderJson = teamObject.getJSONArray("leader");
+                        leader = new Soldier(leaderJson.getJSONObject(0).getInt("id"),leaderJson.getJSONObject(0).getString("soldierName"),leaderJson.getJSONObject(0).getString("rankName"));
+
+                        team = new Team(teamObject.getInt("id"),teamObject.getString("name"),leader,teamList);
+
+                        Log.d("------->>>"+team.toString(),"");
+                        Log.d("------->>>"+team.getTeamList().toString(),"");
+
+
+                    } else
+                        Log.d("no team!", "");
+                } else {
+                    Log.d("no team!", "");
+                }
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+            return null;
+        }
+
+        protected void onPostExecute(String file_url) {
+
+        }
+
+    }
+
 }
