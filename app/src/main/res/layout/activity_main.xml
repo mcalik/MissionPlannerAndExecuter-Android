@@ -13,5 +13,11 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignParentTop="true"
-        android:layout_centerHorizontal="true" />
+        android:layout_centerHorizontal="true"
+        android:clickable="true"
+        android:smoothScrollbar="true"
+        android:theme="@style/Widget.AppCompat.Light.ListView.DropDown"
+        android:drawSelectorOnTop="false"
+        android:listSelector="@android:color/holo_blue_dark" />
+
 </RelativeLayout>

@@ -1,15 +1,11 @@
 package com.calikmustafa.activity;
 
-import android.app.AlertDialog;
+import android.annotation.SuppressLint;
 import android.app.Dialog;
-import android.content.Context;
-import android.content.DialogInterface;
-import android.content.Intent;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v4.app.FragmentActivity;
 import android.util.Log;
-import android.view.LayoutInflater;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
@@ -24,7 +20,6 @@ import com.calikmustafa.model.Soldier;
 import com.calikmustafa.model.Team;
 import com.calikmustafa.mpe.R;
 import com.calikmustafa.structure.JSONParser;
-import com.calikmustafa.structure.MissionListCustomArrayAdapter;
 import com.calikmustafa.structure.TeamListCustomArrayAdaptor;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
@@ -45,26 +40,35 @@ import java.util.List;
 
 public class MapsActivity extends FragmentActivity {
     JSONParser jParser = new JSONParser();
+    JSONArray teamJSON = null;
+
     private static String url_team = "http://www.calikmustafa.com/senior/getTeam.php";
     private static final String TAG_SUCCESS = "success";
-    JSONArray teamJSON = null;
-    private Dialog dialog;
-    private TextView tv1 ;
-    private ListView list ;
+
+    private Dialog teamDialog;
+    private ListView teamListView ;
     private TeamListCustomArrayAdaptor teamListCustomArrayAdaptor;
-    private View view;
+    private View teamDialogView;
+
+    private Dialog detailDialog;
+    private View detailDialogView;
+    private TextView missionName;
+    private TextView targetLat;
+    private TextView targetLon;
+    private TextView missionTime;
+    private TextView missionDetails;
 
     private GoogleMap mMap; // Might be null if Google Play services APK is not available.
     private Mission mission;
     private Team team;
     private ArrayList<Soldier> teamList;
 
-
     private Button showDetails;
     private Button showTeamMembers;
     private Button functionalButton;
 
 
+    @SuppressLint("InflateParams")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -73,21 +77,28 @@ public class MapsActivity extends FragmentActivity {
         mission = (Mission) getIntent().getSerializableExtra("mission");
         setContentView(R.layout.activity_maps);
 
+        //set teamDialog
+        teamDialog = new Dialog(this);
+        teamDialogView = getLayoutInflater().inflate(R.layout.team_custom_listview, null);
+        teamListView= (ListView) teamDialogView.findViewById(R.id.listview);
 
-        dialog = new Dialog(this);
-        view = getLayoutInflater().inflate(R.layout.team_custom_listview, null);
-        list= (ListView) view.findViewById(R.id.listview);
-
+        //set detailDialog
+        detailDialog = new Dialog(this);
+        detailDialogView = getLayoutInflater().inflate(R.layout.mission_details, null);
+        missionName = (TextView) detailDialogView.findViewById(R.id.detailMissionName);
+        targetLat = (TextView) detailDialogView.findViewById(R.id.detailTargetLat);
+        targetLon = (TextView) detailDialogView.findViewById(R.id.detailTargetLon);
+        missionTime = (TextView) detailDialogView.findViewById(R.id.detailMissionTime);
+        missionDetails = (TextView) detailDialogView.findViewById(R.id.missionDetails);
 
         new FetchTeamList().execute(mission.getTeamID()+"");
-        // finding id for tv1
-
 
         setUpMapIfNeeded();
         showDetails = (Button) findViewById(R.id.showMissionDetailsButton);
         showTeamMembers = (Button) findViewById(R.id.showTeamButton);
         showTeamMembers.setEnabled(false);
         functionalButton = (Button) findViewById(R.id.functionalButton);
+
         if(mission.getTeamLeaderID()== Functions.getUser().getId())
             functionalButton.setText("Activate");
         else
@@ -97,24 +108,29 @@ public class MapsActivity extends FragmentActivity {
         showTeamMembers.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                dialog.show();
+                teamDialog.show();
+            }
+        });
+
+        showDetails.setOnClickListener(new View.OnClickListener(){
+
+            @Override
+            public void onClick(View view) {
+                Log.d("mission name: ",mission.getName());
+                detailDialog.setTitle("Mission Details");
+                missionName.setText(mission.getName());
+                targetLat.setText(mission.getLatitude()+"");
+                targetLon.setText(mission.getLongitude()+"");
+                missionTime.setText(mission.getTime());
+                missionDetails.setText(mission.getDetails());
+
+                detailDialog.setContentView(detailDialogView);
+
+                detailDialog.show();
             }
         });
     }
 
-
-
-    //saçma sapan kod yazmışım mk
-    @Deprecated
-    private String[] getTeamListString() {
-        String[] soldierNames = new String[team.getTeamList().size()];
-        for (int i=0; i< team.getTeamList().size();i++) {
-            soldierNames[i] = team.getTeamList().get(i).getName();
-            if (team.getTeamList().get(i).getId() == team.getLeader().getId())
-                soldierNames[i]+="(L)";
-        }
-        return soldierNames;
-    }
 
     @Override
     protected void onResume() {
@@ -122,21 +138,6 @@ public class MapsActivity extends FragmentActivity {
         setUpMapIfNeeded();
     }
 
-    /**
-     * Sets up the map if it is possible to do so (i.e., the Google Play services APK is correctly
-     * installed) and the map has not already been instantiated.. This will ensure that we only ever
-     * call {@link #setUpMap()} once when {@link #mMap} is not null.
-     * <p/>
-     * If it isn't installed {@link SupportMapFragment} (and
-     * {@link com.google.android.gms.maps.MapView MapView}) will show a prompt for the user to
-     * install/update the Google Play services APK on their device.
-     * <p/>
-     * A user can return to this FragmentActivity after following the prompt and correctly
-     * installing/updating/enabling the Google Play services. Since the FragmentActivity may not
-     * have been completely destroyed during this process (it is likely that it would only be
-     * stopped or paused), {@link #onCreate(Bundle)} may not be called again so we should call this
-     * method in {@link #onResume()} to guarantee that it will be called.
-     */
     private void setUpMapIfNeeded() {
         // Do a null check to confirm that we have not already instantiated the map.
         if (mMap == null) {
@@ -151,12 +152,7 @@ public class MapsActivity extends FragmentActivity {
         }
     }
 
-    /**
-     * This is where we can add markers or lines, add listeners or move the camera. In this case, we
-     * just add a marker near Africa.
-     * <p/>
-     * This should only be called once and when we are sure that {@link #mMap} is not null.
-     */
+
     private void setUpMap() {
         MarkerOptions m = new MarkerOptions().position(new LatLng(mission.getLatitude(), mission.getLongitude())).title(mission.getName());
         m.icon(BitmapDescriptorFactory.fromResource(R.drawable.target));
@@ -196,11 +192,10 @@ public class MapsActivity extends FragmentActivity {
 
             // Change MyActivity.this and myListOfItems to your own values
             teamListCustomArrayAdaptor = new TeamListCustomArrayAdaptor(MapsActivity.this, teamList);
-            list.setAdapter(teamListCustomArrayAdaptor);
-            dialog.setTitle(team.getName());
-            dialog.setContentView(view);
+            teamListView.setAdapter(teamListCustomArrayAdaptor);
+            teamDialog.setTitle(team.getName());
+            teamDialog.setContentView(teamDialogView);
         }
-
     }
 
     private void populateTeam(JSONObject json) {
