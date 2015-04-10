@@ -73,12 +73,14 @@ public class MainActivity extends Activity {
             serial = (String) get.invoke(c, "ro.serialno");
         } catch (Exception ignored) {
         }
-
+        Log.d(serial,serial);
         if (serial.isEmpty())
             serial = "2";
 
+        //Toast.makeText(getApplicationContext(), "Device serial is "+serial, Toast.LENGTH_LONG).show();
+
         if(Functions.hasInternet(getApplicationContext()))
-            //if(Functions.getUser()==null)
+            //if(Functions.getUser()==null
                 new Login().execute(serial);
         else
             Toast.makeText(getApplicationContext(), "No Internet Access!", Toast.LENGTH_SHORT).show();
@@ -125,7 +127,7 @@ public class MainActivity extends Activity {
                         JSONObject c = userJSON.getJSONObject(0);
                         Functions.setUser( new Soldier(c.getInt(TAG_ID), c.getString(TAG_NAME), c.getString(TAG_RANK), c.getString(TAG_SERIAL)));
                     } else if (userJSON.length() < 1) {
-                        Log.d("no user with this serial!", "");
+                        Log.d("no user with serial!", "");
                     } else
                         Log.d("more than one user with this serial!", "");
                 } else {

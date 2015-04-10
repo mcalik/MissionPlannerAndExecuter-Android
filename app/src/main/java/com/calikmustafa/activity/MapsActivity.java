@@ -41,6 +41,8 @@ import java.util.List;
 public class MapsActivity extends FragmentActivity {
     JSONParser jParser = new JSONParser();
     JSONArray teamJSON = null;
+    private String missionSituation = "";
+    private int peopleReady=0;
 
     private static String url_team = "http://www.calikmustafa.com/senior/getTeam.php";
     private static final String TAG_SUCCESS = "success";
@@ -242,5 +244,61 @@ public class MapsActivity extends FragmentActivity {
         }
     }
 
+    class MissionSituation extends AsyncTask<String, String, String> {
+        protected String doInBackground(String... args) {
+            // Building Parameters
+            List<NameValuePair> params = new ArrayList<NameValuePair>();
+            params.add(new BasicNameValuePair("mission_id", args[0]));
+            params.add(new BasicNameValuePair("soldier_id", args[1]));
+
+            JSONObject json = jParser.makeHttpRequest("http://www.calikmustafa.com/senior/getMissionSituation.php", "GET", params);
+
+            Log.d("situation: ", json.toString());
+
+            try {
+                int success = json.getInt(TAG_SUCCESS);
+                missionSituation = json.getString("situation");
+                if(json.length()>2)
+                    peopleReady = json.getInt("count");
+
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+
+
+            return null;
+        }
+
+        protected void onPostExecute(String file_url) {
+            Toast.makeText(MapsActivity.this,"situation got",Toast.LENGTH_SHORT).show();
+
+            if(missionSituation.equals("NOTACTIVATED")){
+                if(mission.getTeamLeaderID()==Functions.getUser().getId()){
+                    functionalButton.setText("Activate");
+                    functionalButton.setVisibility(View.VISIBLE);
+                }else
+                    functionalButton.setVisibility(View.INVISIBLE);
+            }else if (missionSituation.equals("STARTED")){
+                if(mission.getTeamLeaderID()==Functions.getUser().getId()){
+                    functionalButton.setText("Finish");
+                    functionalButton.setVisibility(View.VISIBLE);
+                }else
+                    functionalButton.setVisibility(View.INVISIBLE);
+            }else if (missionSituation.equals("ACTIVATED")){
+                functionalButton.setText("Ready");
+                functionalButton.setVisibility(View.VISIBLE);
+            }else if (missionSituation.equals("READY")){
+                if(mission.getTeamLeaderID()==Functions.getUser().getId()){
+                    functionalButton.setText("Start");
+                    functionalButton.setVisibility(View.VISIBLE);
+                }else
+                    functionalButton.setVisibility(View.INVISIBLE);
+            }else if (missionSituation.equals("END")){
+                functionalButton.setText("End of Mission");
+                functionalButton.setVisibility(View.VISIBLE);
+            }
+
+        }
+    }
 
 }
