@@ -15,10 +15,12 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.calikmustafa.common.Functions;
+import com.calikmustafa.model.Location;
 import com.calikmustafa.model.Mission;
 import com.calikmustafa.model.Soldier;
 import com.calikmustafa.model.Team;
 import com.calikmustafa.mpe.R;
+import com.calikmustafa.structure.GPSTracker;
 import com.calikmustafa.structure.JSONParser;
 import com.calikmustafa.structure.TeamListCustomArrayAdaptor;
 import com.google.android.gms.maps.CameraUpdateFactory;
@@ -43,6 +45,7 @@ public class MapsActivity extends FragmentActivity {
     JSONArray teamJSON = null;
     private String missionSituation = "";
     private int peopleReady=0;
+    private GPSTracker gps;
 
     private static String url_team = "http://www.calikmustafa.com/senior/getTeam.php";
     private static final String TAG_SUCCESS = "success";
@@ -60,9 +63,10 @@ public class MapsActivity extends FragmentActivity {
     private TextView missionTime;
     private TextView missionDetails;
 
-    private GoogleMap mMap; // Might be null if Google Play services APK is not available.
+    private GoogleMap mMap;
     private Mission mission;
     private Team team;
+    private Location location;
     private ArrayList<Soldier> teamList;
 
     private Button showDetails;
@@ -79,6 +83,8 @@ public class MapsActivity extends FragmentActivity {
         mission = (Mission) getIntent().getSerializableExtra("mission");
         setContentView(R.layout.activity_maps);
 
+        gps = new GPSTracker(this);
+        
         //set teamDialog
         teamDialog = new Dialog(this);
         teamDialogView = getLayoutInflater().inflate(R.layout.team_custom_listview, null);
@@ -93,7 +99,7 @@ public class MapsActivity extends FragmentActivity {
         missionTime = (TextView) detailDialogView.findViewById(R.id.detailMissionTime);
         missionDetails = (TextView) detailDialogView.findViewById(R.id.missionDetails);
 
-        new FetchTeamList().execute(mission.getTeamID()+"");
+        new FetchTeamList().execute(mission.getTeamID() + "");
 
         setUpMapIfNeeded();
         showDetails = (Button) findViewById(R.id.showMissionDetailsButton);
@@ -131,6 +137,8 @@ public class MapsActivity extends FragmentActivity {
                 detailDialog.show();
             }
         });
+
+        mMap.getMyLocation();
     }
 
 
