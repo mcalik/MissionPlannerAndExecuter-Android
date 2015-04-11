@@ -38,7 +38,10 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Timer;
+import java.util.TimerTask;
 
 public class MapsActivity extends FragmentActivity {
     JSONParser jParser = new JSONParser();
@@ -67,6 +70,7 @@ public class MapsActivity extends FragmentActivity {
     private Mission mission;
     private Team team;
     private Location location;
+    private HashMap<Integer,Location> locationList;
     private ArrayList<Soldier> teamList;
 
     private Button showDetails;
@@ -84,7 +88,11 @@ public class MapsActivity extends FragmentActivity {
         setContentView(R.layout.activity_maps);
 
         gps = new GPSTracker(this);
-        
+        if(!gps.canGetLocation())
+            gps.showSettingsAlert();
+
+        locationList = new HashMap<Integer,Location>();
+
         //set teamDialog
         teamDialog = new Dialog(this);
         teamDialogView = getLayoutInflater().inflate(R.layout.team_custom_listview, null);
@@ -102,16 +110,11 @@ public class MapsActivity extends FragmentActivity {
         new FetchTeamList().execute(mission.getTeamID() + "");
 
         setUpMapIfNeeded();
+
         showDetails = (Button) findViewById(R.id.showMissionDetailsButton);
         showTeamMembers = (Button) findViewById(R.id.showTeamButton);
         showTeamMembers.setEnabled(false);
         functionalButton = (Button) findViewById(R.id.functionalButton);
-
-        if(mission.getTeamLeaderID()== Functions.getUser().getId())
-            functionalButton.setText("Activate");
-        else
-            functionalButton.setText("Ready");
-
 
         showTeamMembers.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -119,33 +122,46 @@ public class MapsActivity extends FragmentActivity {
                 teamDialog.show();
             }
         });
-
-        showDetails.setOnClickListener(new View.OnClickListener(){
+        showDetails.setOnClickListener(new View.OnClickListener() {
 
             @Override
             public void onClick(View view) {
-                Log.d("mission name: ",mission.getName());
+                Log.d("mission name: ", mission.getName());
                 detailDialog.setTitle("Mission Details");
                 missionName.setText(mission.getName());
-                targetLat.setText(mission.getLatitude()+"");
-                targetLon.setText(mission.getLongitude()+"");
+                targetLat.setText(mission.getLatitude() + "");
+                targetLon.setText(mission.getLongitude() + "");
                 missionTime.setText(mission.getTime());
                 missionDetails.setText(mission.getDetails());
-
                 detailDialog.setContentView(detailDialogView);
-
                 detailDialog.show();
             }
         });
 
+        //missionLocation çal??t?r
         mMap.getMyLocation();
+        Timer getLocations = new Timer();
+        getLocations.schedule(new TimerTask() {
+            @Override
+            public void run() {
+                new MissionSituation().execute(mission.getId()+"",Functions.getUser().getId()+"",mMap.getMyLocation().getLatitude()+"",mMap.getMyLocation().getLongitude()+"","");
+            }
+        },4000);
     }
-
+/*
+            params.add(new BasicNameValuePair("mission_id", args[0]));
+            params.add(new BasicNameValuePair("soldier_id", args[1]));
+            params.add(new BasicNameValuePair("lat", args[2]));
+            params.add(new BasicNameValuePair("lon", args[3]));
+            params.add(new BasicNameValuePair("status", args[4]));
+*/
 
     @Override
     protected void onResume() {
         super.onResume();
         setUpMapIfNeeded();
+        if(!gps.canGetLocation())
+            gps.showSettingsAlert();
     }
 
     private void setUpMapIfNeeded() {
@@ -170,7 +186,7 @@ public class MapsActivity extends FragmentActivity {
         CameraPosition cameraPosition = new CameraPosition.Builder().target(
                 new LatLng(mission.getLatitude(), mission.getLongitude())).zoom(12).build();
         mMap.getUiSettings().setCompassEnabled(true);
-        mMap.getUiSettings().setMyLocationButtonEnabled(true);
+        mMap.setMyLocationEnabled(true);
         mMap.getUiSettings().setRotateGesturesEnabled(true);
         mMap.setMyLocationEnabled(true);
 
@@ -205,6 +221,69 @@ public class MapsActivity extends FragmentActivity {
             teamListView.setAdapter(teamListCustomArrayAdaptor);
             teamDialog.setTitle(team.getName());
             teamDialog.setContentView(teamDialogView);
+        }
+    }
+
+    class MissionSituation extends AsyncTask<String, String, String> {
+        protected String doInBackground(String... args) {
+            // Building Parameters
+            List<NameValuePair> params = new ArrayList<NameValuePair>();
+            params.add(new BasicNameValuePair("mission_id", args[0]));
+            params.add(new BasicNameValuePair("soldier_id", args[1]));
+            params.add(new BasicNameValuePair("lat", args[2]));
+            params.add(new BasicNameValuePair("lon", args[3]));
+            params.add(new BasicNameValuePair("status", args[4]));
+
+
+            JSONObject json = jParser.makeHttpRequest("http://www.calikmustafa.com/senior/missionLocation.php", "GET", params);
+
+            Log.d("situation: ", json.toString());
+
+            try {
+                int success = json.getInt(TAG_SUCCESS);
+                missionSituation = json.getString("situation");
+                if(json.has("count"))
+                    peopleReady = json.getInt("count");
+                if(json.has("location"))
+                    fillLocation(json.getJSONArray("location"));
+
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+
+
+            return null;
+        }
+
+        protected void onPostExecute(String file_url) {
+            Toast.makeText(MapsActivity.this,"situation got",Toast.LENGTH_SHORT).show();
+
+            if(missionSituation.equals("NOTACTIVATED")){
+                if(mission.getTeamLeaderID()==Functions.getUser().getId()){
+                    functionalButton.setText("Activate");
+                    functionalButton.setVisibility(View.VISIBLE);
+                }else
+                    functionalButton.setVisibility(View.INVISIBLE);
+            }else if (missionSituation.equals("STARTED")){
+                if(mission.getTeamLeaderID()==Functions.getUser().getId()){
+                    functionalButton.setText("Finish");
+                    functionalButton.setVisibility(View.VISIBLE);
+                }else
+                    functionalButton.setVisibility(View.INVISIBLE);
+            }else if (missionSituation.equals("ACTIVATED")){
+                functionalButton.setText("Ready");
+                functionalButton.setVisibility(View.VISIBLE);
+            }else if (missionSituation.equals("READY")){
+                if(mission.getTeamLeaderID()==Functions.getUser().getId()){
+                    functionalButton.setText("Start");
+                    functionalButton.setVisibility(View.VISIBLE);
+                }else
+                    functionalButton.setVisibility(View.INVISIBLE);
+            }else if (missionSituation.equals("END")){
+                functionalButton.setText("End of Mission");
+                functionalButton.setVisibility(View.VISIBLE);
+            }
+
         }
     }
 
@@ -252,61 +331,24 @@ public class MapsActivity extends FragmentActivity {
         }
     }
 
-    class MissionSituation extends AsyncTask<String, String, String> {
-        protected String doInBackground(String... args) {
-            // Building Parameters
-            List<NameValuePair> params = new ArrayList<NameValuePair>();
-            params.add(new BasicNameValuePair("mission_id", args[0]));
-            params.add(new BasicNameValuePair("soldier_id", args[1]));
 
-            JSONObject json = jParser.makeHttpRequest("http://www.calikmustafa.com/senior/getMissionSituation.php", "GET", params);
+    void fillLocation(JSONArray locs){
+        Location temp;
+        JSONObject json;
+        try {
+            if(locs.length()>0){
+                for(int i=0;i<locs.length();i++){
+                    json = locs.getJSONObject(i);
+                    //if(locationList.containsKey(json.getInt("soldierID"))){
+                        temp=new Location(json.getString("status"),json.getInt("missionID"),json.getInt("soldierID"),json.getDouble("latitude"),json.getDouble("longitude"),json.getString("time"));
+                        locationList.put(temp.getSoldierID(),temp);
+                    //}
 
-            Log.d("situation: ", json.toString());
-
-            try {
-                int success = json.getInt(TAG_SUCCESS);
-                missionSituation = json.getString("situation");
-                if(json.length()>2)
-                    peopleReady = json.getInt("count");
-
-            } catch (JSONException e) {
-                e.printStackTrace();
+                }
             }
-
-
-            return null;
-        }
-
-        protected void onPostExecute(String file_url) {
-            Toast.makeText(MapsActivity.this,"situation got",Toast.LENGTH_SHORT).show();
-
-            if(missionSituation.equals("NOTACTIVATED")){
-                if(mission.getTeamLeaderID()==Functions.getUser().getId()){
-                    functionalButton.setText("Activate");
-                    functionalButton.setVisibility(View.VISIBLE);
-                }else
-                    functionalButton.setVisibility(View.INVISIBLE);
-            }else if (missionSituation.equals("STARTED")){
-                if(mission.getTeamLeaderID()==Functions.getUser().getId()){
-                    functionalButton.setText("Finish");
-                    functionalButton.setVisibility(View.VISIBLE);
-                }else
-                    functionalButton.setVisibility(View.INVISIBLE);
-            }else if (missionSituation.equals("ACTIVATED")){
-                functionalButton.setText("Ready");
-                functionalButton.setVisibility(View.VISIBLE);
-            }else if (missionSituation.equals("READY")){
-                if(mission.getTeamLeaderID()==Functions.getUser().getId()){
-                    functionalButton.setText("Start");
-                    functionalButton.setVisibility(View.VISIBLE);
-                }else
-                    functionalButton.setVisibility(View.INVISIBLE);
-            }else if (missionSituation.equals("END")){
-                functionalButton.setText("End of Mission");
-                functionalButton.setVisibility(View.VISIBLE);
-            }
-
-        }
+        } catch (JSONException e) {
+        e.printStackTrace();
+    }
     }
 
 }

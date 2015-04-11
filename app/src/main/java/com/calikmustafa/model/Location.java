@@ -25,14 +25,13 @@ public class Location  implements Serializable {
         this.status = status;
     }
 
-    public Location(String status, int missionID, int soldierID, double latitude, double longitude, String time, int id) {
+    public Location(String status, int missionID, int soldierID, double latitude, double longitude, String time) {
         this.status = status;
         this.missionID = missionID;
         this.soldierID = soldierID;
         this.latitude = latitude;
         this.longitude = longitude;
         this.time = time;
-        this.id = id;
     }
 
     public int getId() {
