@@ -4,6 +4,7 @@ import android.annotation.SuppressLint;
 import android.app.Dialog;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Handler;
 import android.support.v4.app.FragmentActivity;
 import android.util.Log;
 import android.view.View;
@@ -49,6 +50,10 @@ public class MapsActivity extends FragmentActivity {
     private String missionSituation = "";
     private int peopleReady=0;
     private GPSTracker gps;
+    private LatLng myLocation;
+    private Timer getLocations;
+    private Handler handler;
+    double lat=0,lon=0;
 
     private static String url_team = "http://www.calikmustafa.com/senior/getTeam.php";
     private static final String TAG_SUCCESS = "success";
@@ -92,7 +97,7 @@ public class MapsActivity extends FragmentActivity {
             gps.showSettingsAlert();
 
         locationList = new HashMap<Integer,Location>();
-
+        handler = new Handler();
         //set teamDialog
         teamDialog = new Dialog(this);
         teamDialogView = getLayoutInflater().inflate(R.layout.team_custom_listview, null);
@@ -138,15 +143,24 @@ public class MapsActivity extends FragmentActivity {
             }
         });
 
-        //missionLocation çal??t?r
-        mMap.getMyLocation();
-        Timer getLocations = new Timer();
-        getLocations.schedule(new TimerTask() {
+
+        getLocations = new Timer();
+        getLocations.scheduleAtFixedRate(new TimerTask() {
             @Override
             public void run() {
-                new MissionSituation().execute(mission.getId()+"",Functions.getUser().getId()+"",mMap.getMyLocation().getLatitude()+"",mMap.getMyLocation().getLongitude()+"","");
+                handler.post(new Runnable() {
+                    public void run() {
+                        Log.d("location change Listener: ", myLocation+"");
+                        double lat=0,lon=0;
+                        if(myLocation!=null){
+                            lat=myLocation.latitude;
+                            lon=myLocation.longitude;
+                        }
+                        new MissionSituation().execute(mission.getId() + "", Functions.getUser().getId() + "", lat + "", lon + "", "");
+                    }
+                });
             }
-        },4000);
+        },2000, 4000);
     }
 /*
             params.add(new BasicNameValuePair("mission_id", args[0]));
@@ -164,6 +178,26 @@ public class MapsActivity extends FragmentActivity {
             gps.showSettingsAlert();
     }
 
+    @Override
+    public void onBackPressed()
+    {
+        moveTaskToBack(true);
+        getLocations.cancel();
+    }
+
+    private GoogleMap.OnMyLocationChangeListener myLocationChangeListener = new GoogleMap.OnMyLocationChangeListener() {
+        @Override
+        public void onMyLocationChange(android.location.Location location) {
+
+            myLocation = new LatLng(location.getLatitude(), location.getLongitude());
+            Log.d("location change Listener: ", location.getLatitude() +" "+ location.getLongitude());
+            if(myLocation!=null){
+                lat=myLocation.latitude;
+                lon=myLocation.longitude;
+            }
+        }
+
+    };
     private void setUpMapIfNeeded() {
         // Do a null check to confirm that we have not already instantiated the map.
         if (mMap == null) {
@@ -189,7 +223,7 @@ public class MapsActivity extends FragmentActivity {
         mMap.setMyLocationEnabled(true);
         mMap.getUiSettings().setRotateGesturesEnabled(true);
         mMap.setMyLocationEnabled(true);
-
+        mMap.setOnMyLocationChangeListener(myLocationChangeListener);
         mMap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
 
     }
@@ -258,28 +292,54 @@ public class MapsActivity extends FragmentActivity {
         protected void onPostExecute(String file_url) {
             Toast.makeText(MapsActivity.this,"situation got",Toast.LENGTH_SHORT).show();
 
+
             if(missionSituation.equals("NOTACTIVATED")){
                 if(mission.getTeamLeaderID()==Functions.getUser().getId()){
                     functionalButton.setText("Activate");
                     functionalButton.setVisibility(View.VISIBLE);
+                    functionalButton.setOnClickListener(new View.OnClickListener() {
+                        @Override
+                        public void onClick(View view) {
+                            new MissionSituation().execute(mission.getId() + "", Functions.getUser().getId() + "", lat + "", lon + "", "ACTIVATE");
+                        }
+                    });
                 }else
                     functionalButton.setVisibility(View.INVISIBLE);
             }else if (missionSituation.equals("STARTED")){
                 if(mission.getTeamLeaderID()==Functions.getUser().getId()){
                     functionalButton.setText("Finish");
                     functionalButton.setVisibility(View.VISIBLE);
+                    functionalButton.setOnClickListener(new View.OnClickListener() {
+                        @Override
+                        public void onClick(View view) {
+                            new MissionSituation().execute(mission.getId() + "", Functions.getUser().getId() + "", lat + "", lon + "", "END");
+                        }
+                    });
                 }else
                     functionalButton.setVisibility(View.INVISIBLE);
             }else if (missionSituation.equals("ACTIVATED")){
                 functionalButton.setText("Ready");
                 functionalButton.setVisibility(View.VISIBLE);
+                functionalButton.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View view) {
+                        new MissionSituation().execute(mission.getId() + "", Functions.getUser().getId() + "", lat + "", lon + "", "READY");
+                    }
+                });
             }else if (missionSituation.equals("READY")){
                 if(mission.getTeamLeaderID()==Functions.getUser().getId()){
                     functionalButton.setText("Start");
                     functionalButton.setVisibility(View.VISIBLE);
+                    functionalButton.setOnClickListener(new View.OnClickListener() {
+                        @Override
+                        public void onClick(View view) {
+                            new MissionSituation().execute(mission.getId() + "", Functions.getUser().getId() + "", lat + "", lon + "", "START");
+                        }
+                    });
                 }else
                     functionalButton.setVisibility(View.INVISIBLE);
             }else if (missionSituation.equals("END")){
+                getLocations.cancel();
                 functionalButton.setText("End of Mission");
                 functionalButton.setVisibility(View.VISIBLE);
             }

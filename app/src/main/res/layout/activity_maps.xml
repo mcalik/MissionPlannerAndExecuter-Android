@@ -32,7 +32,8 @@
         android:layout_height="wrap_content"
         android:text="functional button"
         android:id="@+id/functionalButton"
-        android:layout_gravity="center_horizontal|bottom" />
+        android:layout_gravity="center_horizontal|bottom"
+        android:visibility="invisible" />
 
 
 </FrameLayout>
