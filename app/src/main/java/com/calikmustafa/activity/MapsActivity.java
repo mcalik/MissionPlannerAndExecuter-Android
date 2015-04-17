@@ -2,6 +2,7 @@ package com.calikmustafa.activity;
 
 import android.annotation.SuppressLint;
 import android.app.Dialog;
+import android.content.pm.ActivityInfo;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
@@ -54,6 +55,7 @@ public class MapsActivity extends FragmentActivity {
     private Timer getLocations;
     private Handler handler;
     double lat=0,lon=0;
+    double lastLat,lastLon;
 
     private static String url_team = "http://www.calikmustafa.com/senior/getTeam.php";
     private static final String TAG_SUCCESS = "success";
@@ -87,6 +89,8 @@ public class MapsActivity extends FragmentActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
+
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);
         mission = (Mission) getIntent().getSerializableExtra("mission");
@@ -155,6 +159,11 @@ public class MapsActivity extends FragmentActivity {
                         if(myLocation!=null){
                             lat=myLocation.latitude;
                             lon=myLocation.longitude;
+                            lastLat=lat;
+                            lastLon=lon;
+                        }else{
+                            lat=lastLat;
+                            lon=lastLon;
                         }
                         new MissionSituation().execute(mission.getId() + "", Functions.getUser().getId() + "", lat + "", lon + "", "");
                     }
@@ -194,6 +203,11 @@ public class MapsActivity extends FragmentActivity {
             if(myLocation!=null){
                 lat=myLocation.latitude;
                 lon=myLocation.longitude;
+                lastLat=lat;
+                lastLon=lon;
+            }else{
+                lat=lastLat;
+                lon=lastLon;
             }
         }
 
@@ -290,7 +304,7 @@ public class MapsActivity extends FragmentActivity {
         }
 
         protected void onPostExecute(String file_url) {
-            Toast.makeText(MapsActivity.this,"situation got",Toast.LENGTH_SHORT).show();
+            Toast.makeText(MapsActivity.this,missionSituation,Toast.LENGTH_SHORT).show();
 
 
             if(missionSituation.equals("NOTACTIVATED")){
@@ -410,5 +424,8 @@ public class MapsActivity extends FragmentActivity {
         e.printStackTrace();
     }
     }
-
+    //locationlar? göster! öncekilerin üzeine yaz
+    void showLocations(){
+        mMap.addMarker(new MarkerOptions());
+    }
 }
