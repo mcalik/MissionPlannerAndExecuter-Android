@@ -38,6 +38,7 @@ import org.apache.http.message.BasicNameValuePair;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.w3c.dom.Text;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -57,7 +58,7 @@ public class MapsActivity extends FragmentActivity {
     double lat=0,lon=0;
     double lastLat,lastLon;
 
-    private static String url_team = "http://www.calikmustafa.com/senior/getTeam.php";
+    private static String url_team = Functions.SERVER +"/senior/getTeam.php";
     private static final String TAG_SUCCESS = "success";
 
     private Dialog teamDialog;
@@ -72,6 +73,7 @@ public class MapsActivity extends FragmentActivity {
     private TextView targetLon;
     private TextView missionTime;
     private TextView missionDetails;
+    private TextView readyLabel;
 
     private GoogleMap mMap;
     private Mission mission;
@@ -115,6 +117,7 @@ public class MapsActivity extends FragmentActivity {
         targetLon = (TextView) detailDialogView.findViewById(R.id.detailTargetLon);
         missionTime = (TextView) detailDialogView.findViewById(R.id.detailMissionTime);
         missionDetails = (TextView) detailDialogView.findViewById(R.id.missionDetails);
+        readyLabel = (TextView) findViewById(R.id.readyLabel);
 
         new FetchTeamList().execute(mission.getTeamID() + "");
 
@@ -169,7 +172,7 @@ public class MapsActivity extends FragmentActivity {
                     }
                 });
             }
-        },2000, 4000);
+        },1000, 0);
     }
 /*
             params.add(new BasicNameValuePair("mission_id", args[0]));
@@ -190,8 +193,8 @@ public class MapsActivity extends FragmentActivity {
     @Override
     public void onBackPressed()
     {
-        moveTaskToBack(true);
         getLocations.cancel();
+        getLocations.purge();
     }
 
     private GoogleMap.OnMyLocationChangeListener myLocationChangeListener = new GoogleMap.OnMyLocationChangeListener() {
@@ -236,7 +239,6 @@ public class MapsActivity extends FragmentActivity {
         mMap.getUiSettings().setCompassEnabled(true);
         mMap.setMyLocationEnabled(true);
         mMap.getUiSettings().setRotateGesturesEnabled(true);
-        mMap.setMyLocationEnabled(true);
         mMap.setOnMyLocationChangeListener(myLocationChangeListener);
         mMap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
 
@@ -283,7 +285,7 @@ public class MapsActivity extends FragmentActivity {
             params.add(new BasicNameValuePair("status", args[4]));
 
 
-            JSONObject json = jParser.makeHttpRequest("http://www.calikmustafa.com/senior/missionLocation.php", "GET", params);
+            JSONObject json = jParser.makeHttpRequest(Functions.SERVER +"/senior/missionLocation.php", "GET", params);
 
             Log.d("situation: ", json.toString());
 
@@ -292,9 +294,10 @@ public class MapsActivity extends FragmentActivity {
                 missionSituation = json.getString("situation");
                 if(json.has("count"))
                     peopleReady = json.getInt("count");
-                if(json.has("location"))
+                if(json.has("location")) {
                     fillLocation(json.getJSONArray("location"));
-
+                    showLocations();
+                }
             } catch (JSONException e) {
                 e.printStackTrace();
             }
@@ -308,6 +311,7 @@ public class MapsActivity extends FragmentActivity {
 
 
             if(missionSituation.equals("NOTACTIVATED")){
+                readyLabel.setText("");
                 if(mission.getTeamLeaderID()==Functions.getUser().getId()){
                     functionalButton.setText("Activate");
                     functionalButton.setVisibility(View.VISIBLE);
@@ -320,6 +324,7 @@ public class MapsActivity extends FragmentActivity {
                 }else
                     functionalButton.setVisibility(View.INVISIBLE);
             }else if (missionSituation.equals("STARTED")){
+                readyLabel.setText("");
                 if(mission.getTeamLeaderID()==Functions.getUser().getId()){
                     functionalButton.setText("Finish");
                     functionalButton.setVisibility(View.VISIBLE);
@@ -332,6 +337,7 @@ public class MapsActivity extends FragmentActivity {
                 }else
                     functionalButton.setVisibility(View.INVISIBLE);
             }else if (missionSituation.equals("ACTIVATED")){
+                readyLabel.setText(peopleReady + " soldier(s) ready!");
                 functionalButton.setText("Ready");
                 functionalButton.setVisibility(View.VISIBLE);
                 functionalButton.setOnClickListener(new View.OnClickListener() {
@@ -341,6 +347,7 @@ public class MapsActivity extends FragmentActivity {
                     }
                 });
             }else if (missionSituation.equals("READY")){
+                readyLabel.setText(peopleReady + " soldier(s) ready!");
                 if(mission.getTeamLeaderID()==Functions.getUser().getId()){
                     functionalButton.setText("Start");
                     functionalButton.setVisibility(View.VISIBLE);
@@ -353,6 +360,7 @@ public class MapsActivity extends FragmentActivity {
                 }else
                     functionalButton.setVisibility(View.INVISIBLE);
             }else if (missionSituation.equals("END")){
+                readyLabel.setText("");
                 getLocations.cancel();
                 functionalButton.setText("End of Mission");
                 functionalButton.setVisibility(View.VISIBLE);
@@ -424,8 +432,20 @@ public class MapsActivity extends FragmentActivity {
         e.printStackTrace();
     }
     }
-    //locationlar? göster! öncekilerin üzeine yaz
+    //locationlar? gster! öncekilerin üzeine yaz
+    MarkerOptions marker[];
     void showLocations(){
-        mMap.addMarker(new MarkerOptions());
+
+        Location temp;
+        for(int i=0;i<teamList.size();i++){
+            temp = locationList.get(teamList.get(i).getId());
+            if(marker[i]==null){
+                marker[i] = new MarkerOptions().position(new LatLng(temp.getLatitude(), temp.getLongitude())).title(teamList.get(i).getName());
+                marker[i].icon(BitmapDescriptorFactory.fromResource(R.drawable.user_soldier));
+                mMap.addMarker(marker[i]);
+            }else{
+                marker[i].position(new LatLng(temp.getLatitude(), temp.getLongitude()));
+            }
+        }
     }
 }

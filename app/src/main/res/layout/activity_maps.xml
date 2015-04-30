@@ -27,13 +27,28 @@
         android:layout_gravity="center_horizontal|top"
         android:text="Details" />
 
-    <Button
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="functional button"
-        android:id="@+id/functionalButton"
-        android:layout_gravity="center_horizontal|bottom"
-        android:visibility="invisible" />
+    <LinearLayout
+        android:orientation="vertical"
+        android:layout_width="match_parent"
+        android:layout_height="131dp"
+        android:baselineAligned="false"
+        android:layout_gravity="center_horizontal|bottom">
+
+        <Button
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="functional button"
+            android:id="@+id/functionalButton"
+            android:layout_gravity="center_horizontal|bottom"
+            android:visibility="invisible" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textAppearance="?android:attr/textAppearanceMedium"
+            android:id="@+id/readyLabel"
+            android:layout_gravity="center_horizontal" />
+    </LinearLayout>
 
 
 </FrameLayout>

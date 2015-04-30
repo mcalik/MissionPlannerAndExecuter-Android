@@ -6,6 +6,8 @@ import android.content.Intent;
 import android.content.pm.ActivityInfo;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.provider.Settings;
+import android.telephony.TelephonyManager;
 import android.util.Log;
 import android.widget.ListView;
 import android.widget.TextView;
@@ -47,8 +49,8 @@ public class MainActivity extends Activity {
     private static final String TAG_TIME = "time";
     private static final String TAG_DETAILS = "details";
     private static final String TAG_SERIAL = "serial";
-    private static String url_login = "http://www.calikmustafa.com/senior/login.php";
-    private static String get_mission_list = "http://www.calikmustafa.com/senior/getMissionList.php";
+    private static String url_login = Functions.SERVER +"/senior/login.php";
+    private static String get_mission_list = Functions.SERVER +"/senior/getMissionList.php";
     JSONParser jParser = new JSONParser();
     JSONArray userJSON = null;
     ArrayList<Mission> missionList = new ArrayList<Mission>();
@@ -69,15 +71,19 @@ public class MainActivity extends Activity {
 
         String serial = "";
 
-        try {
-            Class<?> c = Class.forName("android.os.SystemProperties");
-            Method get = c.getMethod("get", String.class);
-            serial = (String) get.invoke(c, "ro.serialno");
-        } catch (Exception ignored) {
-        }
-        Log.d(serial,serial);
-        if (serial.isEmpty())
-            serial = "2";
+        serial = Settings.Secure.getString(getContentResolver(), Settings.Secure.ANDROID_ID);
+/*
+
+        Toast.makeText(getApplicationContext(), "ro.serialno : " + serial, Toast.LENGTH_SHORT).show();
+
+   //     if (serial.isEmpty())
+   //         serial = Settings.System.getString(getContentResolver(),Settings.System._ID);
+
+        Toast.makeText(getApplicationContext(), "System._ID : " + Settings.System.getString(getContentResolver(),Settings.System._ID) , Toast.LENGTH_SHORT).show();
+
+        Toast.makeText(getApplicationContext(), "ANDROID._ID : " + Settings.Secure.getString(getContentResolver(), Settings.Secure.ANDROID_ID) , Toast.LENGTH_SHORT).show();
+
+*/
 
         //Toast.makeText(getApplicationContext(), "Device serial is "+serial, Toast.LENGTH_LONG).show();
 
