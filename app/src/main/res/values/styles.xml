@@ -1,8 +1,11 @@
 <resources>
 
     <!-- Base application theme. -->
+
     <style name="AppTheme" parent="android:Theme.Holo.NoActionBar.Fullscreen">
         <!-- Customize your theme here. -->
+        <item name="android:listViewStyle">@style/Widget.AppCompat.Light.ListView.DropDown</item>
+
     </style>
 
 </resources>

@@ -155,37 +155,40 @@ public class MainActivity extends Activity {
         protected void onPostExecute(String file_url) {
                 //pDialog.dismiss();
             if (Functions.getUser() != null) {
-                Toast.makeText(getApplicationContext(), "Logged in as " + Functions.getUser().getName(), Toast.LENGTH_SHORT).show();
                 missionListViewHeader.setText("Welcome " + Functions.getUser().getName());
-                new UserMissionList().execute(Functions.getUser().getId() + "");
+                if(Functions.getUser().getName()==null)
+                    showAlertDialog();
+                else
+                    new UserMissionList().execute(Functions.getUser().getId() + "");
             } else {
-                //illegal attemt to login
-                AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(
-                        MainActivity.this);
-
-                // set title
-                alertDialogBuilder.setTitle("Warning");
-
-                // set dialog message
-                alertDialogBuilder
-                        .setMessage("illegal attemt to login!")
-                        .setCancelable(true);
-
-                // create alert dialog
-                AlertDialog alertDialog = alertDialogBuilder.create();
-
-                // show it
-                alertDialog.show();
+                showAlertDialog();
             }
         }
     }
+public void showAlertDialog(){
+        //illegal attemt to login
+        AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(
+                MainActivity.this);
 
+        // set title
+        alertDialogBuilder.setTitle("Warning");
+
+        // set dialog message
+        alertDialogBuilder
+                .setMessage("illegal attemt to login!")
+                .setCancelable(true);
+
+        // create alert dialog
+        AlertDialog alertDialog = alertDialogBuilder.create();
+
+        // show it
+        alertDialog.show();
+    }
     class UserMissionList extends AsyncTask<String, String, String> {
 
         @Override
         protected void onPreExecute() {
             super.onPreExecute();
-            Toast.makeText(getApplicationContext(), "Getting mission list. Please wait...", Toast.LENGTH_SHORT).show();
 
  /*           pDialog = new ProgressDialog(MainActivity.this);
             pDialog.setMessage("Getting mission list. Please wait...");

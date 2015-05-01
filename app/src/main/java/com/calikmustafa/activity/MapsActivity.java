@@ -1,7 +1,9 @@
 package com.calikmustafa.activity;
 
 import android.annotation.SuppressLint;
+import android.app.AlertDialog;
 import android.app.Dialog;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
 import android.os.AsyncTask;
@@ -82,6 +84,7 @@ public class MapsActivity extends FragmentActivity {
     private Location location;
     private HashMap<Integer, Location> locationList;
     private ArrayList<Soldier> teamList;
+    private HashMap<Integer,Location> enemyList;
 
     private Button showDetails;
     private Button showTeamMembers;
@@ -125,6 +128,8 @@ public class MapsActivity extends FragmentActivity {
 
         setUpMapIfNeeded();
 
+        enemyList = new HashMap<Integer, Location>();
+
         showDetails = (Button) findViewById(R.id.showMissionDetailsButton);
         showTeamMembers = (Button) findViewById(R.id.showTeamButton);
         showTeamMembers.setEnabled(false);
@@ -135,7 +140,7 @@ public class MapsActivity extends FragmentActivity {
             @Override
             public void onClick(View view) {
                 if(myLocation!=null && myLocation.latitude!=0){
-                    CameraPosition cameraPosition = new CameraPosition.Builder().target(new LatLng(myLocation.latitude, myLocation.longitude)).zoom(15).build();
+                    CameraPosition cameraPosition = new CameraPosition.Builder().target(new LatLng(myLocation.latitude, myLocation.longitude)).zoom(18).build();
                     mMap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
                 }
             }
@@ -254,13 +259,38 @@ public class MapsActivity extends FragmentActivity {
         CameraPosition cameraPosition = new CameraPosition.Builder().target(new LatLng(mission.getLatitude(), mission.getLongitude())).zoom(15).build();
         mMap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
 
-/*        mMap.setOnMapLongClickListener(new GoogleMap.OnMapLongClickListener() {
+        mMap.setOnMapLongClickListener(new GoogleMap.OnMapLongClickListener() {
             @Override
             public void onMapLongClick(LatLng latLng) {
-                new MissionSituation().execute(mission.getId() + "", -1 + "", latLng.latitude + "", latLng.longitude + "", "ENEMY");
-            }
-        });*/
+                AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(
+                        MapsActivity.this);
+                final LatLng ll = latLng;
+                // set title
+                alertDialogBuilder.setTitle("Enemy Detected!");
 
+                // set dialog message
+                alertDialogBuilder
+                        .setMessage("Warn team?")
+                        .setCancelable(false)
+                        .setPositiveButton("Yes",new DialogInterface.OnClickListener() {
+                            public void onClick(DialogInterface dialog,int id) {
+                                new setEnemyLocation().execute(mission.getId() + "", Functions.getUser().getId() + "", ll.latitude + "", ll.longitude + "");
+                            }
+                        })
+                        .setNegativeButton("No",new DialogInterface.OnClickListener() {
+                            public void onClick(DialogInterface dialog,int id) {
+                                dialog.cancel();
+                            }
+                        });
+
+                // create alert dialog
+                AlertDialog alertDialog = alertDialogBuilder.create();
+
+                // show it
+                alertDialog.show();
+
+            }
+        });
     }
 
     class FetchTeamList extends AsyncTask<String, String, String> {
@@ -315,6 +345,9 @@ public class MapsActivity extends FragmentActivity {
                     peopleReady = json.getInt("count");
                 if (json.has("location")) {
                     fillLocation(json.getJSONArray("location"));
+                }
+                if (json.has("enemy")) {
+                    fillEnemyLocation(json.getJSONArray("enemy"));
                 }
             } catch (JSONException e) {
                 e.printStackTrace();
@@ -392,6 +425,7 @@ public class MapsActivity extends FragmentActivity {
                 getLocations.cancel();
                 functionalButton.setText("Return Mission List");
                 functionalButton.setVisibility(View.VISIBLE);
+                functionalButton.setEnabled(true);
                 getLocations.purge();
                 getLocations.cancel();
                 Toast.makeText(getApplicationContext(), "Mission Finished" , Toast.LENGTH_SHORT).show();
@@ -405,6 +439,22 @@ public class MapsActivity extends FragmentActivity {
             if(locationList.size()>0)
                 showLocations();
 
+        }
+    }
+
+    class setEnemyLocation extends AsyncTask<String, String, String> {
+
+        protected String doInBackground(String... args) {
+            // Building Parameters
+            List<NameValuePair> params = new ArrayList<NameValuePair>();
+            params.add(new BasicNameValuePair("mission_id", args[0]));
+            params.add(new BasicNameValuePair("soldier_id", args[1]));
+            params.add(new BasicNameValuePair("lat", args[2]));
+            params.add(new BasicNameValuePair("lon", args[3]));
+
+            JSONObject json = jParser.makeHttpRequest(Functions.SERVER + "/senior/setEnemyLocation.php", "GET", params);
+
+            return null;
         }
     }
 
@@ -472,9 +522,26 @@ public class MapsActivity extends FragmentActivity {
         }
     }
 
+    void fillEnemyLocation(JSONArray locs) {
+        Location temp;
+        JSONObject json;
+        try {
+            if (locs.length() > 0) {
+                for (int i = 0; i < locs.length(); i++) {
+                    json = locs.getJSONObject(i);
+                    temp = new Location("", json.getInt("missionID"), -1, json.getDouble("latitude"), json.getDouble("longitude"), json.getString("time"));
+                    enemyList.put(json.getInt("id"), temp);
+                    Log.d("enemy List: ",temp.getLatitude()+"");
+                }
+            }
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+    }
     //locationlar? gster! öncekilerin üzeine yaz
     //MarkerOptions[] marker  = new MarkerOptions[50];
     HashMap<Integer, MarkerOptions> marker = new HashMap<Integer, MarkerOptions>();
+    HashMap<Integer, MarkerOptions> enemyMarker = new HashMap<Integer, MarkerOptions>();
 
     void showLocations() {
         Location temp;
@@ -493,6 +560,15 @@ public class MapsActivity extends FragmentActivity {
                 } else {
                     marker.get(i).position(new LatLng(temp.getLatitude(), temp.getLongitude()));
                 }
+            }
+        }
+        for(int i :enemyList.keySet()){
+            temp = enemyList.get(i);
+            Log.d("Enemy : " , temp.toString());
+            if (!enemyMarker.containsKey(i)) {
+                enemyMarker.put(i, new MarkerOptions().position(new LatLng(temp.getLatitude(), temp.getLongitude())).icon(BitmapDescriptorFactory.fromResource(R.drawable.enemy)));
+
+                mMap.addMarker(enemyMarker.get(i));
             }
         }
     }
