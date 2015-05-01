@@ -2,6 +2,7 @@ package com.calikmustafa.activity;
 
 import android.annotation.SuppressLint;
 import android.app.Dialog;
+import android.content.Intent;
 import android.content.pm.ActivityInfo;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -85,6 +86,7 @@ public class MapsActivity extends FragmentActivity {
     private Button showDetails;
     private Button showTeamMembers;
     private Button functionalButton;
+    private Button myLocationButton;
 
 
     @SuppressLint("InflateParams")
@@ -127,7 +129,17 @@ public class MapsActivity extends FragmentActivity {
         showTeamMembers = (Button) findViewById(R.id.showTeamButton);
         showTeamMembers.setEnabled(false);
         functionalButton = (Button) findViewById(R.id.functionalButton);
+        myLocationButton = (Button) findViewById(R.id.buttonMyLocation);
 
+        myLocationButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if(myLocation!=null && myLocation.latitude!=0){
+                    CameraPosition cameraPosition = new CameraPosition.Builder().target(new LatLng(myLocation.latitude, myLocation.longitude)).zoom(15).build();
+                    mMap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
+                }
+            }
+        });
         showTeamMembers.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -152,12 +164,11 @@ public class MapsActivity extends FragmentActivity {
 
 
         getLocations = new Timer();
+
         getLocations.scheduleAtFixedRate(new TimerTask() {
             @Override
             public void run() {
-                handler.post(new Runnable() {
-                    public void run() {
-                        Log.d("location change Listener: ", myLocation + "");
+                        Log.d("runnable!!!!!!: ", myLocation + "");
                         double lat = 0, lon = 0;
                         if (myLocation != null) {
                             lat = myLocation.latitude;
@@ -169,9 +180,8 @@ public class MapsActivity extends FragmentActivity {
                             lon = lastLon;
                         }
                         new MissionSituation().execute(mission.getId() + "", Functions.getUser().getId() + "", lat + "", lon + "", "");
-                    }
-                });
-            }
+                };
+
         }, 0, 4000);
 
     }
@@ -195,6 +205,7 @@ public class MapsActivity extends FragmentActivity {
     public void onBackPressed() {
         getLocations.cancel();
         getLocations.purge();
+        MapsActivity.this.finish();
     }
 
     private GoogleMap.OnMyLocationChangeListener myLocationChangeListener = new GoogleMap.OnMyLocationChangeListener() {
@@ -232,15 +243,23 @@ public class MapsActivity extends FragmentActivity {
 
 
     private void setUpMap() {
-        MarkerOptions m = new MarkerOptions().position(new LatLng(mission.getLatitude(), mission.getLongitude())).title(mission.getName()).icon(BitmapDescriptorFactory.fromResource(R.drawable.target));
+        MarkerOptions m = new MarkerOptions().position(new LatLng(mission.getLatitude(), mission.getLongitude())).title(mission.getName());
         mMap.addMarker(m);
-        CameraPosition cameraPosition = new CameraPosition.Builder().target(
-                new LatLng(mission.getLatitude(), mission.getLongitude())).zoom(12).build();
         mMap.getUiSettings().setCompassEnabled(true);
         mMap.setMyLocationEnabled(true);
+        mMap.getUiSettings().setMyLocationButtonEnabled(false);
         mMap.getUiSettings().setRotateGesturesEnabled(true);
         mMap.setOnMyLocationChangeListener(myLocationChangeListener);
+
+        CameraPosition cameraPosition = new CameraPosition.Builder().target(new LatLng(mission.getLatitude(), mission.getLongitude())).zoom(15).build();
         mMap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
+
+/*        mMap.setOnMapLongClickListener(new GoogleMap.OnMapLongClickListener() {
+            @Override
+            public void onMapLongClick(LatLng latLng) {
+                new MissionSituation().execute(mission.getId() + "", -1 + "", latLng.latitude + "", latLng.longitude + "", "ENEMY");
+            }
+        });*/
 
     }
 
@@ -312,6 +331,7 @@ public class MapsActivity extends FragmentActivity {
             if (missionSituation.equals("NOTACTIVATED")) {
                 readyLabel.setText("");
                 if (mission.getTeamLeaderID() == Functions.getUser().getId()) {
+                    functionalButton.setEnabled(true);
                     functionalButton.setText("Activate");
                     functionalButton.setVisibility(View.VISIBLE);
                     functionalButton.setOnClickListener(new View.OnClickListener() {
@@ -320,11 +340,14 @@ public class MapsActivity extends FragmentActivity {
                             new MissionSituation().execute(mission.getId() + "", Functions.getUser().getId() + "", lat + "", lon + "", "ACTIVATE");
                         }
                     });
-                } else
-                    functionalButton.setVisibility(View.INVISIBLE);
+                } else{
+                    functionalButton.setEnabled(false);
+                    functionalButton.setText("NOT ACTIVATED");
+                }
             } else if (missionSituation.equals("STARTED")) {
                 readyLabel.setText("");
                 if (mission.getTeamLeaderID() == Functions.getUser().getId()) {
+                    functionalButton.setEnabled(true);
                     functionalButton.setText("Finish");
                     functionalButton.setVisibility(View.VISIBLE);
                     functionalButton.setOnClickListener(new View.OnClickListener() {
@@ -333,10 +356,13 @@ public class MapsActivity extends FragmentActivity {
                             new MissionSituation().execute(mission.getId() + "", Functions.getUser().getId() + "", lat + "", lon + "", "END");
                         }
                     });
-                } else
-                    functionalButton.setVisibility(View.INVISIBLE);
+                } else{
+                    functionalButton.setEnabled(false);
+                    functionalButton.setText("ON GOING");
+                }
             } else if (missionSituation.equals("ACTIVATED")) {
                 readyLabel.setText(peopleReady + " soldier(s) ready!");
+                functionalButton.setEnabled(true);
                 functionalButton.setText("Ready");
                 functionalButton.setVisibility(View.VISIBLE);
                 functionalButton.setOnClickListener(new View.OnClickListener() {
@@ -349,6 +375,7 @@ public class MapsActivity extends FragmentActivity {
                 readyLabel.setText(peopleReady + " soldier(s) ready!");
                 if (mission.getTeamLeaderID() == Functions.getUser().getId()) {
                     functionalButton.setText("Start");
+                    functionalButton.setEnabled(true);
                     functionalButton.setVisibility(View.VISIBLE);
                     functionalButton.setOnClickListener(new View.OnClickListener() {
                         @Override
@@ -356,13 +383,24 @@ public class MapsActivity extends FragmentActivity {
                             new MissionSituation().execute(mission.getId() + "", Functions.getUser().getId() + "", lat + "", lon + "", "START");
                         }
                     });
-                } else
-                    functionalButton.setVisibility(View.INVISIBLE);
+                } else{
+                    functionalButton.setEnabled(false);
+                    functionalButton.setText("NOT STARTED");
+                }
             } else if (missionSituation.equals("END")) {
                 readyLabel.setText("");
                 getLocations.cancel();
-                functionalButton.setText("End of Mission");
+                functionalButton.setText("Return Mission List");
                 functionalButton.setVisibility(View.VISIBLE);
+                getLocations.purge();
+                getLocations.cancel();
+                Toast.makeText(getApplicationContext(), "Mission Finished" , Toast.LENGTH_SHORT).show();
+                functionalButton.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View view) {
+                        finish();
+                    }
+                });
             }
             if(locationList.size()>0)
                 showLocations();
@@ -439,13 +477,18 @@ public class MapsActivity extends FragmentActivity {
     HashMap<Integer, MarkerOptions> marker = new HashMap<Integer, MarkerOptions>();
 
     void showLocations() {
-        Log.d("Locations : ", locationList.toString());
         Location temp;
         for (int i = 0; i < teamList.size(); i++) {
             if (locationList.containsKey(teamList.get(i).getId())) {
                 temp = locationList.get(teamList.get(i).getId());
                 if (!marker.containsKey(i)) {
                     marker.put(i, new MarkerOptions().position(new LatLng(temp.getLatitude(), temp.getLongitude())).title(teamList.get(i).getName()).icon(BitmapDescriptorFactory.fromResource(R.drawable.user_soldier)));
+
+                    if(teamList.get(i).getId()==Functions.getUser().getId())
+                        marker.get(i).icon(BitmapDescriptorFactory.fromResource(R.drawable.soldier_own));
+                    else if(mission.getTeamLeaderID()==teamList.get(i).getId())
+                        marker.get(i).icon(BitmapDescriptorFactory.fromResource(R.drawable.soldier_teamleader));
+
                     mMap.addMarker(marker.get(i));
                 } else {
                     marker.get(i).position(new LatLng(temp.getLatitude(), temp.getLongitude()));

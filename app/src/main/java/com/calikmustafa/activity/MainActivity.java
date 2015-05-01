@@ -1,6 +1,7 @@
 package com.calikmustafa.activity;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.app.ProgressDialog;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
@@ -56,7 +57,7 @@ public class MainActivity extends Activity {
     ArrayList<Mission> missionList = new ArrayList<Mission>();
     ListView missionListView;
     TextView missionListViewHeader;
-    private ProgressDialog pDialog;
+    //private ProgressDialog pDialog;
     MissionListCustomArrayAdapter veriAdaptoru=null;
     Boolean leader=false;
 
@@ -104,11 +105,12 @@ public class MainActivity extends Activity {
         @Override
         protected void onPreExecute() {
             super.onPreExecute();
-            pDialog = new ProgressDialog(MainActivity.this);
+/*            pDialog = new ProgressDialog(MainActivity.this);
             pDialog.setMessage("Logging in. Please wait...");
             pDialog.setIndeterminate(false);
             pDialog.setCancelable(false);
-            pDialog.show();
+            pDialog.show();*/
+            Toast.makeText(getApplicationContext(), "Logging in....", Toast.LENGTH_SHORT).show();
         }
 
         protected String doInBackground(String... args) {
@@ -133,7 +135,8 @@ public class MainActivity extends Activity {
 
                     if (userJSON.length() == 1) {
                         JSONObject c = userJSON.getJSONObject(0);
-                        Functions.setUser( new Soldier(c.getInt(TAG_ID), c.getString(TAG_NAME), c.getString(TAG_RANK), c.getString(TAG_SERIAL)));
+                        Functions.setUser(new Soldier(c.getInt(TAG_ID), c.getString(TAG_NAME), c.getString(TAG_RANK), c.getString(TAG_SERIAL)));
+
                     } else if (userJSON.length() < 1) {
                         Log.d("no user with serial!", "");
                     } else
@@ -143,21 +146,38 @@ public class MainActivity extends Activity {
                 }
             } catch (JSONException e) {
                 e.printStackTrace();
-                pDialog.dismiss();
+                //pDialog.dismiss();
             }
 
             return null;
         }
 
         protected void onPostExecute(String file_url) {
-            // dismiss the dialog once product deleted
-            pDialog.dismiss();
-            if(Functions.getUser()!=null){
+                //pDialog.dismiss();
+            if (Functions.getUser() != null) {
+                Toast.makeText(getApplicationContext(), "Logged in as " + Functions.getUser().getName(), Toast.LENGTH_SHORT).show();
                 missionListViewHeader.setText("Welcome " + Functions.getUser().getName());
                 new UserMissionList().execute(Functions.getUser().getId() + "");
+            } else {
+                //illegal attemt to login
+                AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(
+                        MainActivity.this);
+
+                // set title
+                alertDialogBuilder.setTitle("Warning");
+
+                // set dialog message
+                alertDialogBuilder
+                        .setMessage("illegal attemt to login!")
+                        .setCancelable(true);
+
+                // create alert dialog
+                AlertDialog alertDialog = alertDialogBuilder.create();
+
+                // show it
+                alertDialog.show();
             }
         }
-
     }
 
     class UserMissionList extends AsyncTask<String, String, String> {
@@ -165,11 +185,13 @@ public class MainActivity extends Activity {
         @Override
         protected void onPreExecute() {
             super.onPreExecute();
-            pDialog = new ProgressDialog(MainActivity.this);
+            Toast.makeText(getApplicationContext(), "Getting mission list. Please wait...", Toast.LENGTH_SHORT).show();
+
+ /*           pDialog = new ProgressDialog(MainActivity.this);
             pDialog.setMessage("Getting mission list. Please wait...");
             pDialog.setIndeterminate(false);
             pDialog.setCancelable(false);
-            pDialog.show();
+            pDialog.show();*/
         }
 
         protected String doInBackground(String... args) {
@@ -216,7 +238,7 @@ public class MainActivity extends Activity {
                 }
             } catch (JSONException e) {
                 e.printStackTrace();
-                pDialog.dismiss();
+                //pDialog.dismiss();
             }
             return null;
         }
@@ -226,7 +248,7 @@ public class MainActivity extends Activity {
             veriAdaptoru = new MissionListCustomArrayAdapter(MainActivity.this,missionList,MainActivity.this.getResources());
             missionListView.setAdapter(veriAdaptoru);
 
-            pDialog.dismiss();
+            //pDialog.dismiss();
         }
 
     }
@@ -243,7 +265,7 @@ public class MainActivity extends Activity {
                     startActivity(intent);
 
 
-                Toast.makeText(getApplicationContext(), temp.getName() , Toast.LENGTH_SHORT).show();
+                //Toast.makeText(getApplicationContext(), temp.getName() , Toast.LENGTH_SHORT).show();
     }
 
 }

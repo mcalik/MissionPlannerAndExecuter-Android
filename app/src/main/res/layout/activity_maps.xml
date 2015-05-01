@@ -34,6 +34,13 @@
         android:baselineAligned="false"
         android:layout_gravity="center_horizontal|bottom">
 
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textAppearance="?android:attr/textAppearanceMedium"
+            android:id="@+id/readyLabel"
+            android:layout_gravity="center_horizontal" />
+
         <Button
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -42,13 +49,19 @@
             android:layout_gravity="center_horizontal|bottom"
             android:visibility="invisible" />
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:textAppearance="?android:attr/textAppearanceMedium"
-            android:id="@+id/readyLabel"
-            android:layout_gravity="center_horizontal" />
     </LinearLayout>
+
+    <Button
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:id="@+id/buttonMyLocation"
+        android:layout_gravity="right|top"
+        android:background="@android:drawable/presence_online"
+        android:layout_marginTop="5dp"
+        android:layout_marginRight="5dp"
+        android:clickable="true"
+        android:enabled="true"
+        android:visibility="visible" />
 
 
 </FrameLayout>
