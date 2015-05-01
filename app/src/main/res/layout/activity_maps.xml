@@ -44,24 +44,47 @@
         <Button
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="functional button"
             android:id="@+id/functionalButton"
             android:layout_gravity="center_horizontal|bottom"
-            android:visibility="invisible" />
+            android:visibility="visible" />
 
     </LinearLayout>
+
+    <ScrollView
+        android:layout_width="334dp"
+        android:layout_height="213dp"
+        android:id="@+id/radioMessages"
+        android:layout_gravity="left|bottom"
+        android:layout_marginLeft="10dp"
+        android:layout_marginBottom="10dp"
+        android:fillViewport="true" >
+
+    </ScrollView>
 
     <Button
         android:layout_width="32dp"
         android:layout_height="32dp"
         android:id="@+id/buttonMyLocation"
-        android:layout_gravity="right|top"
+        android:layout_gravity="right|bottom"
         android:background="@android:drawable/presence_online"
         android:layout_marginTop="5dp"
         android:layout_marginRight="5dp"
         android:clickable="true"
         android:enabled="true"
         android:visibility="visible" />
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Message"
+        android:id="@+id/buttonMessage"
+        android:layout_gravity="right|top" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/messagesTextView"
+        android:layout_gravity="left|center_vertical" />
 
 
 </FrameLayout>

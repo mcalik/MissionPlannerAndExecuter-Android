@@ -18,6 +18,7 @@
         android:smoothScrollbar="true"
         android:theme="@style/Widget.AppCompat.Light.ListView.DropDown"
         android:drawSelectorOnTop="false"
-        android:listSelector="@android:color/holo_blue_dark" />
+        android:listSelector="@android:color/holo_blue_dark"
+        style="@style/Theme.Base.AppCompat.Light" />
 
 </RelativeLayout>

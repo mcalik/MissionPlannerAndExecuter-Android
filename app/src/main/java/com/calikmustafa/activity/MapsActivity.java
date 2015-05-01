@@ -14,8 +14,10 @@ import android.util.Log;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.ListView;
+import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -52,12 +54,13 @@ import java.util.TimerTask;
 public class MapsActivity extends FragmentActivity {
     JSONParser jParser = new JSONParser();
     JSONArray teamJSON = null;
+    JSONArray messageJSON =null;
+    AlertDialog.Builder messageDialog;
     private String missionSituation = "";
     private int peopleReady = 0;
     private GPSTracker gps;
     private LatLng myLocation;
     private Timer getLocations;
-    private Handler handler;
     double lat = 0, lon = 0;
     double lastLat, lastLon;
 
@@ -77,6 +80,7 @@ public class MapsActivity extends FragmentActivity {
     private TextView missionTime;
     private TextView missionDetails;
     private TextView readyLabel;
+    private TextView messageTextView;
 
     private GoogleMap mMap;
     private Mission mission;
@@ -85,11 +89,13 @@ public class MapsActivity extends FragmentActivity {
     private HashMap<Integer, Location> locationList;
     private ArrayList<Soldier> teamList;
     private HashMap<Integer,Location> enemyList;
+    private HashMap<Integer,String> messageList;
 
     private Button showDetails;
     private Button showTeamMembers;
     private Button functionalButton;
     private Button myLocationButton;
+    private Button messageButton;
 
 
     @SuppressLint("InflateParams")
@@ -108,7 +114,6 @@ public class MapsActivity extends FragmentActivity {
             gps.showSettingsAlert();
 
         locationList = new HashMap<Integer, Location>();
-        handler = new Handler();
         //set teamDialog
         teamDialog = new Dialog(this);
         teamDialogView = getLayoutInflater().inflate(R.layout.team_custom_listview, null);
@@ -123,18 +128,30 @@ public class MapsActivity extends FragmentActivity {
         missionTime = (TextView) detailDialogView.findViewById(R.id.detailMissionTime);
         missionDetails = (TextView) detailDialogView.findViewById(R.id.missionDetails);
         readyLabel = (TextView) findViewById(R.id.readyLabel);
-
-        new FetchTeamList().execute(mission.getTeamID() + "");
+        messageTextView = (TextView) findViewById(R.id.messagesTextView);
 
         setUpMapIfNeeded();
 
         enemyList = new HashMap<Integer, Location>();
+        messageList = new HashMap<Integer, String>();
 
         showDetails = (Button) findViewById(R.id.showMissionDetailsButton);
         showTeamMembers = (Button) findViewById(R.id.showTeamButton);
         showTeamMembers.setEnabled(false);
         functionalButton = (Button) findViewById(R.id.functionalButton);
         myLocationButton = (Button) findViewById(R.id.buttonMyLocation);
+        messageButton = (Button) findViewById(R.id.buttonMessage);
+        messageButton.setEnabled(false);
+
+        new FetchTeamList().execute(mission.getTeamID() + "");
+        new FetchMessageList().execute();
+
+        messageButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                messageDialog.show();
+            }
+        });
 
         myLocationButton.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -167,13 +184,11 @@ public class MapsActivity extends FragmentActivity {
             }
         });
 
-
         getLocations = new Timer();
 
         getLocations.scheduleAtFixedRate(new TimerTask() {
             @Override
             public void run() {
-                        Log.d("runnable!!!!!!: ", myLocation + "");
                         double lat = 0, lon = 0;
                         if (myLocation != null) {
                             lat = myLocation.latitude;
@@ -187,16 +202,9 @@ public class MapsActivity extends FragmentActivity {
                         new MissionSituation().execute(mission.getId() + "", Functions.getUser().getId() + "", lat + "", lon + "", "");
                 };
 
-        }, 0, 4000);
+        }, 0, 2000);
 
     }
-/*
-            params.add(new BasicNameValuePair("mission_id", args[0]));
-            params.add(new BasicNameValuePair("soldier_id", args[1]));
-            params.add(new BasicNameValuePair("lat", args[2]));
-            params.add(new BasicNameValuePair("lon", args[3]));
-            params.add(new BasicNameValuePair("status", args[4]));
-*/
 
     @Override
     protected void onResume() {
@@ -250,10 +258,10 @@ public class MapsActivity extends FragmentActivity {
     private void setUpMap() {
         MarkerOptions m = new MarkerOptions().position(new LatLng(mission.getLatitude(), mission.getLongitude())).title(mission.getName());
         mMap.addMarker(m);
-        mMap.getUiSettings().setCompassEnabled(true);
         mMap.setMyLocationEnabled(true);
         mMap.getUiSettings().setMyLocationButtonEnabled(false);
         mMap.getUiSettings().setRotateGesturesEnabled(true);
+        mMap.getUiSettings().setZoomControlsEnabled(false);
         mMap.setOnMyLocationChangeListener(myLocationChangeListener);
 
         CameraPosition cameraPosition = new CameraPosition.Builder().target(new LatLng(mission.getLatitude(), mission.getLongitude())).zoom(15).build();
@@ -295,7 +303,6 @@ public class MapsActivity extends FragmentActivity {
 
     class FetchTeamList extends AsyncTask<String, String, String> {
 
-
         protected String doInBackground(String... args) {
             // Building Parameters
             List<NameValuePair> params = new ArrayList<NameValuePair>();
@@ -323,6 +330,74 @@ public class MapsActivity extends FragmentActivity {
         }
     }
 
+    class FetchMessageList extends AsyncTask<String, String, String> {
+
+
+        protected String doInBackground(String... args) {
+            List<NameValuePair> params = new ArrayList<NameValuePair>();
+
+            JSONObject json = jParser.makeHttpRequest(Functions.SERVER + "/senior/getMessageList.php", "GET", params);
+            try {
+                JSONArray messageJson = json.getJSONArray("message");
+                if (messageJson.length()>0) {
+                    for(int i=0;i<messageJson.length();i++){
+                        messageList.put(messageJson.getJSONObject(i).getInt("id"),messageJson.getJSONObject(i).getString("message"));
+                    }
+                }
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+            return null;
+        }
+
+        protected void onPostExecute(String file_url) {
+            Toast.makeText(MapsActivity.this, "Messages fetched!", Toast.LENGTH_SHORT).show();
+            messageButton.setEnabled(true);
+
+            messageDialog = new AlertDialog.Builder(
+                    MapsActivity.this);
+            messageDialog.setIcon(R.drawable.ic_launcher);
+            messageDialog.setTitle("Send Message");
+            final ArrayAdapter<String> arrayAdapter = new ArrayAdapter<String>(
+                    MapsActivity.this,
+                    android.R.layout.select_dialog_singlechoice);
+            for (String s : messageList.values())
+                arrayAdapter.add(s);
+            messageDialog.setNegativeButton("Cancel",
+                    new DialogInterface.OnClickListener() {
+
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            dialog.dismiss();
+                        }
+                    });
+
+            messageDialog.setAdapter(arrayAdapter,
+                    new DialogInterface.OnClickListener() {
+
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            new sendMessage().execute(mission.getId()+"",Functions.getUser().getId()+"","-1",(which+1)+"");
+                        }
+                    });
+        }
+    }
+
+    public void showMessages(JSONArray messageJson){
+        JSONObject temp;
+        String asd="";
+
+        for(int i=messageJson.length()-1; i>-1;i--){
+            try {
+                temp=messageJson.getJSONObject(i);
+                asd+="["+temp.getString("time").substring(11)+"] "+temp.getString("name") + " : " + temp.getString("message")+"\n";
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        }
+        messageTextView.setText(asd);
+    }
+
     class MissionSituation extends AsyncTask<String, String, String> {
         protected String doInBackground(String... args) {
             // Building Parameters
@@ -348,6 +423,9 @@ public class MapsActivity extends FragmentActivity {
                 }
                 if (json.has("enemy")) {
                     fillEnemyLocation(json.getJSONArray("enemy"));
+                }
+                if (json.has("message")) {
+                    messageJSON = json.getJSONArray("message");
                 }
             } catch (JSONException e) {
                 e.printStackTrace();
@@ -438,7 +516,8 @@ public class MapsActivity extends FragmentActivity {
             }
             if(locationList.size()>0)
                 showLocations();
-
+            if(messageJSON.length()>0)
+                showMessages(messageJSON);
         }
     }
 
@@ -453,6 +532,22 @@ public class MapsActivity extends FragmentActivity {
             params.add(new BasicNameValuePair("lon", args[3]));
 
             JSONObject json = jParser.makeHttpRequest(Functions.SERVER + "/senior/setEnemyLocation.php", "GET", params);
+
+            return null;
+        }
+    }
+
+    class sendMessage extends AsyncTask<String, String, String> {
+
+        protected String doInBackground(String... args) {
+            // Building Parameters
+            List<NameValuePair> params = new ArrayList<NameValuePair>();
+            params.add(new BasicNameValuePair("missionID", args[0]));
+            params.add(new BasicNameValuePair("soldierID", args[1]));
+            params.add(new BasicNameValuePair("toSoldier", args[2]));
+            params.add(new BasicNameValuePair("messageID", args[3]));
+
+            jParser.makeHttpRequest(Functions.SERVER + "/senior/sendMessage.php", "GET", params);
 
             return null;
         }
@@ -539,6 +634,7 @@ public class MapsActivity extends FragmentActivity {
         }
     }
     //locationlar? gster! öncekilerin üzeine yaz
+    //MarkerOptions[] marker  = new MarkerOptions[50];
     //MarkerOptions[] marker  = new MarkerOptions[50];
     HashMap<Integer, MarkerOptions> marker = new HashMap<Integer, MarkerOptions>();
     HashMap<Integer, MarkerOptions> enemyMarker = new HashMap<Integer, MarkerOptions>();
