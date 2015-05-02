@@ -28,6 +28,7 @@ import com.calikmustafa.model.Mission;
 import com.calikmustafa.model.Soldier;
 import com.calikmustafa.model.Team;
 import com.calikmustafa.mpe.R;
+import com.calikmustafa.structure.AudioPlayer;
 import com.calikmustafa.structure.GPSTracker;
 import com.calikmustafa.structure.JSONParser;
 import com.calikmustafa.structure.TeamListCustomArrayAdaptor;
@@ -64,7 +65,9 @@ public class MapsActivity extends FragmentActivity {
     private Timer getLocations;
     double lat = 0, lon = 0;
     double lastLat, lastLon;
-    int toSoldier=-1;
+    int toSoldier = -1;
+    AudioPlayer ap;
+    int lastMessage = 0;
 
     private static String url_team = Functions.SERVER + "/senior/getTeam.php";
     private static final String TAG_SUCCESS = "success";
@@ -105,6 +108,7 @@ public class MapsActivity extends FragmentActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
+
 
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);
@@ -201,8 +205,6 @@ public class MapsActivity extends FragmentActivity {
                 }
                 new MissionSituation().execute(mission.getId() + "", Functions.getUser().getId() + "", lat + "", lon + "", "");
             }
-
-            ;
 
         }, 0, 2000);
 
@@ -370,7 +372,7 @@ public class MapsActivity extends FragmentActivity {
         }
 
         protected void onPostExecute(String file_url) {
-            Toast.makeText(MapsActivity.this, "Messages fetched!", Toast.LENGTH_SHORT).show();
+            //Toast.makeText(MapsActivity.this, "Messages fetched!", Toast.LENGTH_SHORT).show();
             messageButton.setEnabled(true);
 
             messageDialog = new AlertDialog.Builder(
@@ -396,10 +398,10 @@ public class MapsActivity extends FragmentActivity {
 
                         @Override
                         public void onClick(DialogInterface dialog, int which) {
-                            new sendMessage().execute(mission.getId() + "", Functions.getUser().getId() + "", toSoldier+"", (which + 1) + "");
-                            toSoldier=-1;
+                            new sendMessage().execute(mission.getId() + "", Functions.getUser().getId() + "", toSoldier + "", (which + 1) + "");
+                            toSoldier = -1;
                             messageDialog.setTitle("Send Message");
-                            if(teamDialog.isShowing())
+                            if (teamDialog.isShowing())
                                 teamDialog.dismiss();
                         }
                     });
@@ -413,6 +415,10 @@ public class MapsActivity extends FragmentActivity {
             for (int i = messageJson.length() - 1; i > -1; i--) {
                 try {
                     temp = messageJson.getJSONObject(i);
+                    if (lastMessage < temp.getInt("id")) {
+                        ap = new AudioPlayer(temp.getInt("messageID") + ".mp3", MapsActivity.this);
+                        lastMessage = temp.getInt("id");
+                    }
                     asd += "[" + temp.getString("time").substring(11) + "] " + temp.getString("name") + " : " + temp.getString("message") + "\n";
                 } catch (JSONException e) {
                     e.printStackTrace();
@@ -529,7 +535,7 @@ public class MapsActivity extends FragmentActivity {
                 functionalButton.setEnabled(true);
                 getLocations.purge();
                 getLocations.cancel();
-                Toast.makeText(getApplicationContext(), "Mission Finished", Toast.LENGTH_SHORT).show();
+                //Toast.makeText(getApplicationContext(), "Mission Finished", Toast.LENGTH_SHORT).show();
                 functionalButton.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View view) {
@@ -539,7 +545,7 @@ public class MapsActivity extends FragmentActivity {
             }
             if (locationList.size() > 0)
                 showLocations();
-            if (messageJSON!= null && messageJSON.length() > 0)
+            if (messageJSON != null && messageJSON.length() > 0)
                 showMessages(messageJSON);
         }
     }
@@ -690,14 +696,11 @@ public class MapsActivity extends FragmentActivity {
             }
         }
     }
-    public void onItemClick(int mPosition)
-    {
-        Log.d("cektir", "");
 
-        Toast.makeText(MapsActivity.this, teamList.get(mPosition).getName() + " i item clicked", Toast.LENGTH_SHORT);
-        if(messageDialog!=null){
+    public void onItemClick(int mPosition) {
+        if (messageDialog != null) {
             messageDialog.setTitle("Message to " + teamList.get(mPosition).getName());
-            toSoldier=teamList.get(mPosition).getId();
+            toSoldier = teamList.get(mPosition).getId();
             messageDialog.show();
         }
     }

@@ -5,6 +5,8 @@ import android.app.AlertDialog;
 import android.app.ProgressDialog;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
+import android.content.res.ColorStateList;
+import android.graphics.Color;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.provider.Settings;
@@ -18,6 +20,7 @@ import com.calikmustafa.common.Functions;
 import com.calikmustafa.model.Mission;
 import com.calikmustafa.model.Soldier;
 import com.calikmustafa.mpe.R;
+import com.calikmustafa.structure.AudioPlayer;
 import com.calikmustafa.structure.JSONParser;
 import com.calikmustafa.structure.MissionListCustomArrayAdapter;
 
@@ -60,7 +63,7 @@ public class MainActivity extends Activity {
     //private ProgressDialog pDialog;
     MissionListCustomArrayAdapter veriAdaptoru=null;
     Boolean leader=false;
-
+    AudioPlayer ap;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -69,6 +72,7 @@ public class MainActivity extends Activity {
         setContentView(R.layout.activity_main);
         missionListView = (ListView) findViewById(R.id.missionList);
 
+        ap = new AudioPlayer("10.mp3",MainActivity.this);
 
         String serial = "";
 
@@ -96,6 +100,8 @@ public class MainActivity extends Activity {
 
         missionListViewHeader = new TextView(getApplicationContext());
         missionListViewHeader.setEnabled(false);
+        missionListViewHeader.setTextColor(Color.BLACK);
+        missionListViewHeader.setTextSize(16);
         missionListView.addHeaderView(missionListViewHeader);
 
     }
@@ -261,6 +267,7 @@ public void showAlertDialog(){
     {
         Mission temp = missionList.get(mPosition);
 
+       ap = new AudioPlayer("6.mp3",MainActivity.this);
 
 
                     Intent intent = new Intent(MainActivity.this, MapsActivity.class);

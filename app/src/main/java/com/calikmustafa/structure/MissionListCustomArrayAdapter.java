@@ -3,6 +3,7 @@ package com.calikmustafa.structure;
 import android.app.Activity;
 import android.content.Context;
 import android.content.res.Resources;
+import android.graphics.Color;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -94,7 +95,7 @@ public class MissionListCustomArrayAdapter extends BaseAdapter implements View.O
 
         if(data.size()<=0)
         {
-            holder.name.setText("No Data");
+            holder.name.setText("No Mission!");
 
         }
         else
@@ -134,12 +135,15 @@ public class MissionListCustomArrayAdapter extends BaseAdapter implements View.O
         @Override
         public void onClick(View arg0) {
 
+            arg0.setBackgroundColor(Color.rgb(255,255,255));
 
             MainActivity sct = (MainActivity)activity;
 
             /****  Call  onItemClick Method inside CustomListViewAndroidExample Class ( See Below )****/
+            arg0.setBackgroundColor(Color.parseColor("#aaffdb58"));
 
            sct.onItemClick(mPosition);
+
         }
     }
 }

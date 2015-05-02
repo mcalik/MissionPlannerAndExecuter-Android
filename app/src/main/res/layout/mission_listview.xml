@@ -1,10 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <TableLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent" android:layout_height="match_parent"
-    android:paddingTop="0dip" android:layout_gravity="top"
+    android:layout_gravity="top"
     style="@style/Theme.Base.Light"
     android:clickable="true"
-    android:focusable="true">
+    android:focusable="true"
+    android:background="#aaffdb58"
+    android:padding="10dip">
 
     <TableRow
         android:layout_width="fill_parent"
@@ -18,7 +20,8 @@
             android:id="@+id/missionName"
             android:layout_column="1"
             android:layout_marginTop="5dp"
-            android:layout_marginLeft="10dp" />
+            android:layout_marginLeft="10dp"
+            android:textColor="#ff000000" />
     </TableRow>
 
     <TableRow
@@ -33,7 +36,8 @@
             android:id="@+id/missionDate"
             android:layout_column="1"
             android:layout_marginTop="5dp"
-            android:layout_marginLeft="10dp" />
+            android:layout_marginLeft="10dp"
+            android:textColor="#ff464646" />
 
         <TextView
             android:layout_width="wrap_content"
@@ -43,7 +47,8 @@
             android:id="@+id/missionLat"
             android:layout_column="3"
             android:layout_marginTop="5dp"
-            android:layout_marginLeft="10dp" />
+            android:layout_marginLeft="10dp"
+            android:textColor="#ff464646" />
 
         <TextView
             android:layout_width="wrap_content"
@@ -53,7 +58,8 @@
             android:id="@+id/missionLon"
             android:layout_column="6"
             android:layout_marginTop="5dp"
-            android:layout_marginLeft="10dp" />
+            android:layout_marginLeft="10dp"
+            android:textColor="#ff464646" />
     </TableRow>
 
 </TableLayout>

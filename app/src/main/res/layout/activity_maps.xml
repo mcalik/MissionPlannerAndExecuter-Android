@@ -67,11 +67,11 @@
         android:id="@+id/buttonMyLocation"
         android:layout_gravity="right|bottom"
         android:background="@android:drawable/presence_online"
-        android:layout_marginTop="5dp"
-        android:layout_marginRight="5dp"
+        android:layout_marginRight="15dip"
         android:clickable="true"
         android:enabled="true"
-        android:visibility="visible" />
+        android:visibility="visible"
+        android:layout_marginBottom="15dip" />
 
     <Button
         android:layout_width="wrap_content"
@@ -84,7 +84,12 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:id="@+id/messagesTextView"
-        android:layout_gravity="left|center_vertical" />
+        android:layout_gravity="left|center_vertical"
+        android:textColor="#ff000000"
+        android:background="#60ffffff"
+        android:textSize="18sp"
+        android:autoText="false"
+        android:text="Radio Messages:" />
 
 
 </FrameLayout>
