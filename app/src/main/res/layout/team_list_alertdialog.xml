@@ -1,9 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
     <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content">
+        android:layout_height="wrap_content"
+    android:paddingTop="5dp"
+    android:paddingBottom="5dp"
+    android:clickable="true">
 
-        <TextView
+    <TextView
 
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -11,13 +14,16 @@
             android:text="soldierName"
             android:id="@+id/soldierName"
             android:layout_marginTop="10dp"
-            android:layout_marginLeft="10dp" />
+            android:layout_marginLeft="10dp"
+        android:layout_gravity="center"
+        android:paddingBottom="5dp"
+        android:layout_marginBottom="5dp" />
 
-        <ImageView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:id="@+id/rankImage"
-            android:layout_gravity="right|center_vertical" />
+    <ImageView
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:id="@+id/rankImage"
+        android:layout_gravity="left|center_vertical" />
 
 
-    </FrameLayout>
+</FrameLayout>

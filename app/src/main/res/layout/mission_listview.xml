@@ -2,7 +2,9 @@
 <TableLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent" android:layout_height="match_parent"
     android:paddingTop="0dip" android:layout_gravity="top"
-    style="@style/Theme.Base.Light">
+    style="@style/Theme.Base.Light"
+    android:clickable="true"
+    android:focusable="true">
 
     <TableRow
         android:layout_width="fill_parent"

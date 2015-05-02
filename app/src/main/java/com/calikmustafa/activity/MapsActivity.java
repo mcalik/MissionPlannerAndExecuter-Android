@@ -14,6 +14,7 @@ import android.util.Log;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.ListView;
@@ -54,7 +55,7 @@ import java.util.TimerTask;
 public class MapsActivity extends FragmentActivity {
     JSONParser jParser = new JSONParser();
     JSONArray teamJSON = null;
-    JSONArray messageJSON =null;
+    JSONArray messageJSON = null;
     AlertDialog.Builder messageDialog;
     private String missionSituation = "";
     private int peopleReady = 0;
@@ -63,6 +64,7 @@ public class MapsActivity extends FragmentActivity {
     private Timer getLocations;
     double lat = 0, lon = 0;
     double lastLat, lastLon;
+    int toSoldier=-1;
 
     private static String url_team = Functions.SERVER + "/senior/getTeam.php";
     private static final String TAG_SUCCESS = "success";
@@ -88,8 +90,8 @@ public class MapsActivity extends FragmentActivity {
     private Location location;
     private HashMap<Integer, Location> locationList;
     private ArrayList<Soldier> teamList;
-    private HashMap<Integer,Location> enemyList;
-    private HashMap<Integer,String> messageList;
+    private HashMap<Integer, Location> enemyList;
+    private HashMap<Integer, String> messageList;
 
     private Button showDetails;
     private Button showTeamMembers;
@@ -118,7 +120,6 @@ public class MapsActivity extends FragmentActivity {
         teamDialog = new Dialog(this);
         teamDialogView = getLayoutInflater().inflate(R.layout.team_custom_listview, null);
         teamListView = (ListView) teamDialogView.findViewById(R.id.listview);
-
         //set detailDialog
         detailDialog = new Dialog(this);
         detailDialogView = getLayoutInflater().inflate(R.layout.mission_details, null);
@@ -143,7 +144,6 @@ public class MapsActivity extends FragmentActivity {
         messageButton = (Button) findViewById(R.id.buttonMessage);
         messageButton.setEnabled(false);
 
-        new FetchTeamList().execute(mission.getTeamID() + "");
         new FetchMessageList().execute();
 
         messageButton.setOnClickListener(new View.OnClickListener() {
@@ -156,7 +156,7 @@ public class MapsActivity extends FragmentActivity {
         myLocationButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                if(myLocation!=null && myLocation.latitude!=0){
+                if (myLocation != null && myLocation.latitude != 0) {
                     CameraPosition cameraPosition = new CameraPosition.Builder().target(new LatLng(myLocation.latitude, myLocation.longitude)).zoom(18).build();
                     mMap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
                 }
@@ -189,20 +189,24 @@ public class MapsActivity extends FragmentActivity {
         getLocations.scheduleAtFixedRate(new TimerTask() {
             @Override
             public void run() {
-                        double lat = 0, lon = 0;
-                        if (myLocation != null) {
-                            lat = myLocation.latitude;
-                            lon = myLocation.longitude;
-                            lastLat = lat;
-                            lastLon = lon;
-                        } else {
-                            lat = lastLat;
-                            lon = lastLon;
-                        }
-                        new MissionSituation().execute(mission.getId() + "", Functions.getUser().getId() + "", lat + "", lon + "", "");
-                };
+                double lat = 0, lon = 0;
+                if (myLocation != null) {
+                    lat = myLocation.latitude;
+                    lon = myLocation.longitude;
+                    lastLat = lat;
+                    lastLon = lon;
+                } else {
+                    lat = lastLat;
+                    lon = lastLon;
+                }
+                new MissionSituation().execute(mission.getId() + "", Functions.getUser().getId() + "", lat + "", lon + "", "");
+            }
+
+            ;
 
         }, 0, 2000);
+
+        new FetchTeamList().execute(mission.getTeamID() + "");
 
     }
 
@@ -226,7 +230,7 @@ public class MapsActivity extends FragmentActivity {
         public void onMyLocationChange(android.location.Location location) {
 
             myLocation = new LatLng(location.getLatitude(), location.getLongitude());
-            Log.d("location change Listener: ", location.getLatitude() + " " + location.getLongitude());
+            //Log.d("location change Listener: ", location.getLatitude() + " " + location.getLongitude());
             if (myLocation != null) {
                 lat = myLocation.latitude;
                 lon = myLocation.longitude;
@@ -280,13 +284,13 @@ public class MapsActivity extends FragmentActivity {
                 alertDialogBuilder
                         .setMessage("Warn team?")
                         .setCancelable(false)
-                        .setPositiveButton("Yes",new DialogInterface.OnClickListener() {
-                            public void onClick(DialogInterface dialog,int id) {
+                        .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
+                            public void onClick(DialogInterface dialog, int id) {
                                 new setEnemyLocation().execute(mission.getId() + "", Functions.getUser().getId() + "", ll.latitude + "", ll.longitude + "");
                             }
                         })
-                        .setNegativeButton("No",new DialogInterface.OnClickListener() {
-                            public void onClick(DialogInterface dialog,int id) {
+                        .setNegativeButton("No", new DialogInterface.OnClickListener() {
+                            public void onClick(DialogInterface dialog, int id) {
                                 dialog.cancel();
                             }
                         });
@@ -319,19 +323,34 @@ public class MapsActivity extends FragmentActivity {
         }
 
         protected void onPostExecute(String file_url) {
-            Toast.makeText(MapsActivity.this, "Team list fetched!", Toast.LENGTH_SHORT).show();
+            //Toast.makeText(MapsActivity.this, "Team list fetched!", Toast.LENGTH_SHORT).show();
             showTeamMembers.setEnabled(true);
 
             // Change MyActivity.this and myListOfItems to your own values
             teamListCustomArrayAdaptor = new TeamListCustomArrayAdaptor(MapsActivity.this, teamList);
             teamListView.setAdapter(teamListCustomArrayAdaptor);
+            teamListView.setClickable(true);
             teamDialog.setTitle(team.getName());
             teamDialog.setContentView(teamDialogView);
+            teamDialogView.setClickable(true);
+
+/*            teamListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+                @Override
+                public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
+                    Log.i("cektir","");
+
+                    Toast.makeText(MapsActivity.this,teamList.get(i).getName()+" i item clicked",Toast.LENGTH_SHORT);
+                    if(messageDialog!=null){
+                        messageDialog.setTitle("Message to " + teamList.get(i).getName());
+                        toSoldier=teamList.get(i).getId();
+                        messageDialog.show();
+                    }
+                }
+            });*/
         }
     }
 
     class FetchMessageList extends AsyncTask<String, String, String> {
-
 
         protected String doInBackground(String... args) {
             List<NameValuePair> params = new ArrayList<NameValuePair>();
@@ -339,9 +358,9 @@ public class MapsActivity extends FragmentActivity {
             JSONObject json = jParser.makeHttpRequest(Functions.SERVER + "/senior/getMessageList.php", "GET", params);
             try {
                 JSONArray messageJson = json.getJSONArray("message");
-                if (messageJson.length()>0) {
-                    for(int i=0;i<messageJson.length();i++){
-                        messageList.put(messageJson.getJSONObject(i).getInt("id"),messageJson.getJSONObject(i).getString("message"));
+                if (messageJson.length() > 0) {
+                    for (int i = 0; i < messageJson.length(); i++) {
+                        messageList.put(messageJson.getJSONObject(i).getInt("id"), messageJson.getJSONObject(i).getString("message"));
                     }
                 }
             } catch (JSONException e) {
@@ -377,24 +396,28 @@ public class MapsActivity extends FragmentActivity {
 
                         @Override
                         public void onClick(DialogInterface dialog, int which) {
-                            new sendMessage().execute(mission.getId()+"",Functions.getUser().getId()+"","-1",(which+1)+"");
+                            new sendMessage().execute(mission.getId() + "", Functions.getUser().getId() + "", toSoldier+"", (which + 1) + "");
+                            toSoldier=-1;
+                            messageDialog.setTitle("Send Message");
+                            if(teamDialog.isShowing())
+                                teamDialog.dismiss();
                         }
                     });
         }
     }
 
-    public void showMessages(JSONArray messageJson){
+    public void showMessages(JSONArray messageJson) {
         JSONObject temp;
-        String asd="";
-
-        for(int i=messageJson.length()-1; i>-1;i--){
-            try {
-                temp=messageJson.getJSONObject(i);
-                asd+="["+temp.getString("time").substring(11)+"] "+temp.getString("name") + " : " + temp.getString("message")+"\n";
-            } catch (JSONException e) {
-                e.printStackTrace();
+        String asd = "";
+        if (messageJson.length() > 0)
+            for (int i = messageJson.length() - 1; i > -1; i--) {
+                try {
+                    temp = messageJson.getJSONObject(i);
+                    asd += "[" + temp.getString("time").substring(11) + "] " + temp.getString("name") + " : " + temp.getString("message") + "\n";
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
             }
-        }
         messageTextView.setText(asd);
     }
 
@@ -411,7 +434,7 @@ public class MapsActivity extends FragmentActivity {
 
             JSONObject json = jParser.makeHttpRequest(Functions.SERVER + "/senior/missionLocation.php", "GET", params);
 
-            Log.d("situation: ", json.toString());
+            //Log.d("situation: ", json.toString());
 
             try {
                 int success = json.getInt(TAG_SUCCESS);
@@ -451,7 +474,7 @@ public class MapsActivity extends FragmentActivity {
                             new MissionSituation().execute(mission.getId() + "", Functions.getUser().getId() + "", lat + "", lon + "", "ACTIVATE");
                         }
                     });
-                } else{
+                } else {
                     functionalButton.setEnabled(false);
                     functionalButton.setText("NOT ACTIVATED");
                 }
@@ -467,7 +490,7 @@ public class MapsActivity extends FragmentActivity {
                             new MissionSituation().execute(mission.getId() + "", Functions.getUser().getId() + "", lat + "", lon + "", "END");
                         }
                     });
-                } else{
+                } else {
                     functionalButton.setEnabled(false);
                     functionalButton.setText("ON GOING");
                 }
@@ -494,7 +517,7 @@ public class MapsActivity extends FragmentActivity {
                             new MissionSituation().execute(mission.getId() + "", Functions.getUser().getId() + "", lat + "", lon + "", "START");
                         }
                     });
-                } else{
+                } else {
                     functionalButton.setEnabled(false);
                     functionalButton.setText("NOT STARTED");
                 }
@@ -506,7 +529,7 @@ public class MapsActivity extends FragmentActivity {
                 functionalButton.setEnabled(true);
                 getLocations.purge();
                 getLocations.cancel();
-                Toast.makeText(getApplicationContext(), "Mission Finished" , Toast.LENGTH_SHORT).show();
+                Toast.makeText(getApplicationContext(), "Mission Finished", Toast.LENGTH_SHORT).show();
                 functionalButton.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View view) {
@@ -514,9 +537,9 @@ public class MapsActivity extends FragmentActivity {
                     }
                 });
             }
-            if(locationList.size()>0)
+            if (locationList.size() > 0)
                 showLocations();
-            if(messageJSON.length()>0)
+            if (messageJSON!= null && messageJSON.length() > 0)
                 showMessages(messageJSON);
         }
     }
@@ -626,16 +649,15 @@ public class MapsActivity extends FragmentActivity {
                     json = locs.getJSONObject(i);
                     temp = new Location("", json.getInt("missionID"), -1, json.getDouble("latitude"), json.getDouble("longitude"), json.getString("time"));
                     enemyList.put(json.getInt("id"), temp);
-                    Log.d("enemy List: ",temp.getLatitude()+"");
+                    Log.d("enemy List: ", temp.getLatitude() + "");
                 }
             }
         } catch (JSONException e) {
             e.printStackTrace();
         }
     }
-    //locationlar? gster! öncekilerin üzeine yaz
-    //MarkerOptions[] marker  = new MarkerOptions[50];
-    //MarkerOptions[] marker  = new MarkerOptions[50];
+
+
     HashMap<Integer, MarkerOptions> marker = new HashMap<Integer, MarkerOptions>();
     HashMap<Integer, MarkerOptions> enemyMarker = new HashMap<Integer, MarkerOptions>();
 
@@ -647,9 +669,9 @@ public class MapsActivity extends FragmentActivity {
                 if (!marker.containsKey(i)) {
                     marker.put(i, new MarkerOptions().position(new LatLng(temp.getLatitude(), temp.getLongitude())).title(teamList.get(i).getName()).icon(BitmapDescriptorFactory.fromResource(R.drawable.user_soldier)));
 
-                    if(teamList.get(i).getId()==Functions.getUser().getId())
+                    if (teamList.get(i).getId() == Functions.getUser().getId())
                         marker.get(i).icon(BitmapDescriptorFactory.fromResource(R.drawable.soldier_own));
-                    else if(mission.getTeamLeaderID()==teamList.get(i).getId())
+                    else if (mission.getTeamLeaderID() == teamList.get(i).getId())
                         marker.get(i).icon(BitmapDescriptorFactory.fromResource(R.drawable.soldier_teamleader));
 
                     mMap.addMarker(marker.get(i));
@@ -658,14 +680,25 @@ public class MapsActivity extends FragmentActivity {
                 }
             }
         }
-        for(int i :enemyList.keySet()){
+        for (int i : enemyList.keySet()) {
             temp = enemyList.get(i);
-            Log.d("Enemy : " , temp.toString());
+            Log.d("Enemy : ", temp.toString());
             if (!enemyMarker.containsKey(i)) {
                 enemyMarker.put(i, new MarkerOptions().position(new LatLng(temp.getLatitude(), temp.getLongitude())).icon(BitmapDescriptorFactory.fromResource(R.drawable.enemy)));
 
                 mMap.addMarker(enemyMarker.get(i));
             }
+        }
+    }
+    public void onItemClick(int mPosition)
+    {
+        Log.d("cektir", "");
+
+        Toast.makeText(MapsActivity.this, teamList.get(mPosition).getName() + " i item clicked", Toast.LENGTH_SHORT);
+        if(messageDialog!=null){
+            messageDialog.setTitle("Message to " + teamList.get(mPosition).getName());
+            toSoldier=teamList.get(mPosition).getId();
+            messageDialog.show();
         }
     }
 }
