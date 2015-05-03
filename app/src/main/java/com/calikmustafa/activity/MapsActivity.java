@@ -4,23 +4,18 @@ import android.annotation.SuppressLint;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.DialogInterface;
-import android.content.Intent;
 import android.content.pm.ActivityInfo;
 import android.os.AsyncTask;
 import android.os.Bundle;
-import android.os.Handler;
 import android.support.v4.app.FragmentActivity;
 import android.util.Log;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
-import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.ListView;
-import android.widget.ScrollView;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import com.calikmustafa.common.Functions;
 import com.calikmustafa.model.Location;
@@ -45,7 +40,6 @@ import org.apache.http.message.BasicNameValuePair;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
-import org.w3c.dom.Text;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -64,10 +58,12 @@ public class MapsActivity extends FragmentActivity {
     private LatLng myLocation;
     private Timer getLocations;
     double lat = 0, lon = 0;
-    double lastLat, lastLon;
+    double lastLat=0, lastLon=0;
     int toSoldier = -1;
     AudioPlayer ap;
     int lastMessage = 0;
+    int asyncTaskNumber = 0;
+    final int MAXASYNCTASKNUMBER = 2;
 
     private static String url_team = Functions.SERVER + "/senior/getTeam.php";
     private static final String TAG_SUCCESS = "success";
@@ -148,8 +144,18 @@ public class MapsActivity extends FragmentActivity {
         messageButton = (Button) findViewById(R.id.buttonMessage);
         messageButton.setEnabled(false);
 
-        new FetchMessageList().execute();
-
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                new FetchMessageList().execute();
+            }
+        });
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                new FetchTeamList().execute(mission.getTeamID() + "");
+            }
+        });
         messageButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -161,7 +167,7 @@ public class MapsActivity extends FragmentActivity {
             @Override
             public void onClick(View view) {
                 if (myLocation != null && myLocation.latitude != 0) {
-                    CameraPosition cameraPosition = new CameraPosition.Builder().target(new LatLng(myLocation.latitude, myLocation.longitude)).zoom(18).build();
+                    CameraPosition cameraPosition = new CameraPosition.Builder().target(new LatLng(myLocation.latitude, myLocation.longitude)).zoom(20).build();
                     mMap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
                 }
             }
@@ -188,8 +194,17 @@ public class MapsActivity extends FragmentActivity {
             }
         });
 
-        getLocations = new Timer();
+        Log.i("onCreate", "onCreate");
 
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        //setUpMapIfNeeded();
+        Log.i("onResume", "onResume");
+        asyncTaskNumber = 0;
+        getLocations = new Timer();
         getLocations.scheduleAtFixedRate(new TimerTask() {
             @Override
             public void run() {
@@ -197,34 +212,52 @@ public class MapsActivity extends FragmentActivity {
                 if (myLocation != null) {
                     lat = myLocation.latitude;
                     lon = myLocation.longitude;
+                    if(asyncTaskNumber<MAXASYNCTASKNUMBER)
+                        if(lastLat==lat)
+                            new MissionSituation().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, mission.getId() + "", Functions.getUser().getId() + "");
+                        else
+                            new MissionSituation().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, mission.getId() + "", Functions.getUser().getId() + "", lat + "", lon + "", "");
+
                     lastLat = lat;
                     lastLon = lon;
-                } else {
-                    lat = lastLat;
-                    lon = lastLon;
-                }
-                new MissionSituation().execute(mission.getId() + "", Functions.getUser().getId() + "", lat + "", lon + "", "");
+                }else
+                    new MissionSituation().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, mission.getId() + "", Functions.getUser().getId() + "");
+
+                //new MissionSituation().execute(mission.getId() + "", Functions.getUser().getId() + "", lat + "", lon + "", "");
+
             }
 
-        }, 0, 2000);
+        }, 0, 1000);
 
-        new FetchTeamList().execute(mission.getTeamID() + "");
-
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        setUpMapIfNeeded();
         if (!gps.canGetLocation())
             gps.showSettingsAlert();
+
+    }
+
+/*    @Override
+    public void onBackPressed() {
+        Log.w("back","onBackPressed");
+        getLocations.cancel();
+        getLocations.purge();
+        super.onBackPressed();
+        MapsActivity.this.finish();
+    }*/
+
+    @Override
+    public void onPause(){
+        Log.i("pause", "onPause");
+        getLocations.cancel();
+        getLocations.purge();
+        super.onPause();
     }
 
     @Override
-    public void onBackPressed() {
+    public void onStop(){
+        Log.i("onStop","onStop");
         getLocations.cancel();
         getLocations.purge();
         MapsActivity.this.finish();
+        super.onStop();
     }
 
     private GoogleMap.OnMyLocationChangeListener myLocationChangeListener = new GoogleMap.OnMyLocationChangeListener() {
@@ -233,7 +266,7 @@ public class MapsActivity extends FragmentActivity {
 
             myLocation = new LatLng(location.getLatitude(), location.getLongitude());
             //Log.d("location change Listener: ", location.getLatitude() + " " + location.getLongitude());
-            if (myLocation != null) {
+/*            if (myLocation != null) {
                 lat = myLocation.latitude;
                 lon = myLocation.longitude;
                 lastLat = lat;
@@ -241,7 +274,7 @@ public class MapsActivity extends FragmentActivity {
             } else {
                 lat = lastLat;
                 lon = lastLon;
-            }
+            }*/
         }
 
     };
@@ -336,6 +369,8 @@ public class MapsActivity extends FragmentActivity {
             teamDialog.setContentView(teamDialogView);
             teamDialogView.setClickable(true);
 
+            Log.i("team fetched ", "team fetched");
+
 /*            teamListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
                 @Override
                 public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
@@ -415,10 +450,13 @@ public class MapsActivity extends FragmentActivity {
             for (int i = messageJson.length() - 1; i > -1; i--) {
                 try {
                     temp = messageJson.getJSONObject(i);
-                    if (lastMessage < temp.getInt("id")) {
+
+                    if (lastMessage < temp.getInt("id") && temp.getInt("id") == messageJson.getJSONObject(0).getInt("id")) {
                         ap = new AudioPlayer(temp.getInt("messageID") + ".mp3", MapsActivity.this);
                         lastMessage = temp.getInt("id");
                     }
+
+
                     asd += "[" + temp.getString("time").substring(11) + "] " + temp.getString("name") + " : " + temp.getString("message") + "\n";
                 } catch (JSONException e) {
                     e.printStackTrace();
@@ -429,14 +467,19 @@ public class MapsActivity extends FragmentActivity {
 
     class MissionSituation extends AsyncTask<String, String, String> {
         protected String doInBackground(String... args) {
+            asyncTaskNumber++;
+            Log.i("AsyncTask started. Total in queue :",asyncTaskNumber+"");
+
             // Building Parameters
             List<NameValuePair> params = new ArrayList<NameValuePair>();
             params.add(new BasicNameValuePair("mission_id", args[0]));
             params.add(new BasicNameValuePair("soldier_id", args[1]));
-            params.add(new BasicNameValuePair("lat", args[2]));
-            params.add(new BasicNameValuePair("lon", args[3]));
-            params.add(new BasicNameValuePair("status", args[4]));
-
+            Log.w("args.length",args.length+"");
+            if(args.length>2) {
+                params.add(new BasicNameValuePair("lat", args[2]));
+                params.add(new BasicNameValuePair("lon", args[3]));
+                params.add(new BasicNameValuePair("status", args[4]));
+            }
 
             JSONObject json = jParser.makeHttpRequest(Functions.SERVER + "/senior/missionLocation.php", "GET", params);
 
@@ -547,6 +590,10 @@ public class MapsActivity extends FragmentActivity {
                 showLocations();
             if (messageJSON != null && messageJSON.length() > 0)
                 showMessages(messageJSON);
+
+            asyncTaskNumber--;
+
+            Log.i("AsyncTask finished. Total in queue :",asyncTaskNumber+"");
         }
     }
 
@@ -669,6 +716,9 @@ public class MapsActivity extends FragmentActivity {
 
     void showLocations() {
         Location temp;
+        //if(teamList!=null)
+        //teamlist bo?sa patlar
+        if(teamList!=null)
         for (int i = 0; i < teamList.size(); i++) {
             if (locationList.containsKey(teamList.get(i).getId())) {
                 temp = locationList.get(teamList.get(i).getId());

@@ -2,6 +2,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:keepScreenOn="true"
     tools:context=".MapActivity">
 
 
@@ -86,8 +87,8 @@
         android:id="@+id/messagesTextView"
         android:layout_gravity="left|center_vertical"
         android:textColor="#ff000000"
-        android:background="#60ffffff"
-        android:textSize="18sp"
+        android:background="#40ffffff"
+        android:textSize="16sp"
         android:autoText="false"
         android:text="Radio Messages:" />
 

@@ -1,7 +1,6 @@
 package com.calikmustafa.model;
 
 import java.io.Serializable;
-import java.util.Date;
 
 /**
  * Created by Mustafa on 21-Nov-14.

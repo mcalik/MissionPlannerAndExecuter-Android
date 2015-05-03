@@ -1,6 +1,5 @@
 package com.calikmustafa.structure;
 
-import android.app.Activity;
 import android.content.Context;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -10,7 +9,6 @@ import android.widget.BaseAdapter;
 import android.widget.ImageView;
 import android.widget.TextView;
 
-import com.calikmustafa.activity.MainActivity;
 import com.calikmustafa.activity.MapsActivity;
 import com.calikmustafa.model.Soldier;
 import com.calikmustafa.mpe.R;

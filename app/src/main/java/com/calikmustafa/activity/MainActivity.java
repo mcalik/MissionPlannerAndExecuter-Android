@@ -2,19 +2,15 @@ package com.calikmustafa.activity;
 
 import android.app.Activity;
 import android.app.AlertDialog;
-import android.app.ProgressDialog;
+import android.content.DialogInterface;
 import android.content.Intent;
-import android.content.pm.ActivityInfo;
-import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.provider.Settings;
-import android.telephony.TelephonyManager;
 import android.util.Log;
 import android.widget.ListView;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import com.calikmustafa.common.Functions;
 import com.calikmustafa.model.Mission;
@@ -30,13 +26,10 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 
 //known issues
-//ekranı çevirince yeniden login olma sorunu
-
 
 public class MainActivity extends Activity {
 
@@ -64,21 +57,19 @@ public class MainActivity extends Activity {
     MissionListCustomArrayAdapter veriAdaptoru=null;
     Boolean leader=false;
     AudioPlayer ap;
+    String serial = "";
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
 
         setContentView(R.layout.activity_main);
         missionListView = (ListView) findViewById(R.id.missionList);
 
         ap = new AudioPlayer("10.mp3",MainActivity.this);
 
-        String serial = "";
-
         serial = Settings.Secure.getString(getContentResolver(), Settings.Secure.ANDROID_ID);
 /*
-
         Toast.makeText(getApplicationContext(), "ro.serialno : " + serial, Toast.LENGTH_SHORT).show();
 
    //     if (serial.isEmpty())
@@ -92,35 +83,40 @@ public class MainActivity extends Activity {
 
         //Toast.makeText(getApplicationContext(), "Device serial is "+serial, Toast.LENGTH_LONG).show();
 
-        if(Functions.hasInternet(getApplicationContext()))
-            //if(Functions.getUser()==null
-                new Login().execute(serial);
-        else
-            Toast.makeText(getApplicationContext(), "No Internet Access!", Toast.LENGTH_SHORT).show();
-
         missionListViewHeader = new TextView(getApplicationContext());
         missionListViewHeader.setEnabled(false);
-        missionListViewHeader.setTextColor(Color.BLACK);
+        missionListViewHeader.setTextColor(Color.DKGRAY);
         missionListViewHeader.setTextSize(16);
         missionListView.addHeaderView(missionListViewHeader);
 
+
     }
 
-    class Login extends AsyncTask<String, String, String> {
+    @Override
+    public void onResume(){
+        super.onResume();
 
-        @Override
-        protected void onPreExecute() {
-            super.onPreExecute();
-/*            pDialog = new ProgressDialog(MainActivity.this);
-            pDialog.setMessage("Logging in. Please wait...");
-            pDialog.setIndeterminate(false);
-            pDialog.setCancelable(false);
-            pDialog.show();*/
-            Toast.makeText(getApplicationContext(), "Logging in....", Toast.LENGTH_SHORT).show();
-        }
+        if(Functions.hasInternet(getApplicationContext()))
+            if(Functions.getUser().getId()==0)
+                new Login().execute(serial);
+            else
+                new UserMissionList().execute(Functions.getUser().getId() + "");
+        else
+                showAlertDialog("Warning", "Not able to reach to server!");
+
+
+    }
+    @Override
+    public void onStop(){
+        super.onStop();
+        MainActivity.this.finish();
+    }
+    class Login extends AsyncTask<String, String, String> {
 
         protected String doInBackground(String... args) {
             // Building Parameters
+            Log.w("Logging in","Login!");
+
             List<NameValuePair> params = new ArrayList<NameValuePair>();
             params.add(new BasicNameValuePair("serial", args[0]));
 
@@ -163,26 +159,31 @@ public class MainActivity extends Activity {
             if (Functions.getUser() != null) {
                 missionListViewHeader.setText("Welcome " + Functions.getUser().getName());
                 if(Functions.getUser().getName()==null)
-                    showAlertDialog();
+                    showAlertDialog("Warning","illegal attemt to login!");
                 else
                     new UserMissionList().execute(Functions.getUser().getId() + "");
             } else {
-                showAlertDialog();
+                showAlertDialog("Warning","illegal attemt to login!");
             }
         }
     }
-public void showAlertDialog(){
+public void showAlertDialog(String title,String context){
         //illegal attemt to login
         AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(
                 MainActivity.this);
 
         // set title
-        alertDialogBuilder.setTitle("Warning");
+        alertDialogBuilder.setTitle(title);
 
         // set dialog message
         alertDialogBuilder
-                .setMessage("illegal attemt to login!")
-                .setCancelable(true);
+                .setMessage(context)
+                .setCancelable(false).setNeutralButton("Ok!", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialogInterface, int i) {
+                MainActivity.this.finish();
+            }
+        });
 
         // create alert dialog
         AlertDialog alertDialog = alertDialogBuilder.create();
@@ -192,18 +193,9 @@ public void showAlertDialog(){
     }
     class UserMissionList extends AsyncTask<String, String, String> {
 
-        @Override
-        protected void onPreExecute() {
-            super.onPreExecute();
-
- /*           pDialog = new ProgressDialog(MainActivity.this);
-            pDialog.setMessage("Getting mission list. Please wait...");
-            pDialog.setIndeterminate(false);
-            pDialog.setCancelable(false);
-            pDialog.show();*/
-        }
-
         protected String doInBackground(String... args) {
+            Log.w("UserMissionList","Mission List!");
+            missionList.clear();
             // Building Parameters
             List<NameValuePair> params = new ArrayList<NameValuePair>();
             params.add(new BasicNameValuePair("soldier_id", args[0]));
@@ -256,6 +248,7 @@ public void showAlertDialog(){
             // dismiss the dialog once product deleted
             veriAdaptoru = new MissionListCustomArrayAdapter(MainActivity.this,missionList,MainActivity.this.getResources());
             missionListView.setAdapter(veriAdaptoru);
+            missionListViewHeader.setText("Welcome " + Functions.getUser().getName());
 
             //pDialog.dismiss();
         }

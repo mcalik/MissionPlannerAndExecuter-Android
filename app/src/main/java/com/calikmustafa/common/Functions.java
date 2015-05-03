@@ -6,6 +6,8 @@ import android.net.NetworkInfo;
 
 import com.calikmustafa.model.Soldier;
 
+import java.io.IOException;
+
 /**
  * Created by Mustafa on 19-Nov-14.
  */
@@ -38,6 +40,36 @@ public class Functions {
 
         } else
             return false;
-        return true;
+        //if (executeCommand())
+            return true;
+
+    }
+
+    private static boolean executeCommand(){
+        System.out.println(" executeCammand");
+        Runtime runtime = Runtime.getRuntime();
+        try
+        {
+            Process  mIpAddrProcess = runtime.exec("/system/bin/ping -c 1 "+Functions.SERVER.substring(7));
+            //Log.w("server ping",Functions.SERVER.substring(7));
+            int mExitValue = mIpAddrProcess.waitFor();
+            System.out.println(" mExitValue "+mExitValue);
+            if(mExitValue==0){
+                return true;
+            }else{
+                return false;
+            }
+        }
+        catch (InterruptedException ignore)
+        {
+            ignore.printStackTrace();
+            System.out.println(" Exception:"+ignore);
+        }
+        catch (IOException e)
+        {
+            e.printStackTrace();
+            System.out.println(" Exception:"+e);
+        }
+        return false;
     }
  }

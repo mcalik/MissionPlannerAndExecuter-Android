@@ -18,6 +18,8 @@
         android:allowBackup="true"
         android:icon="@drawable/ic_launcher"
         android:label="@string/app_name"
+        android:hardwareAccelerated="true"
+        android:screenOrientation="landscape"
         android:theme="@style/AppTheme">
         <meta-data
             android:name="com.google.android.gms.version"
@@ -28,9 +30,12 @@
 
         <activity
             android:name="com.calikmustafa.activity.MapsActivity"
-            android:label="@string/title_activity_maps"></activity>
+            android:screenOrientation="landscape"
+            android:label="@string/title_activity_maps">
+        </activity>
         <activity
             android:name="com.calikmustafa.activity.MainActivity"
+            android:screenOrientation="landscape"
             android:label="@string/title_activity_main">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
