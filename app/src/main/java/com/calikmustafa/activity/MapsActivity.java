@@ -49,6 +49,9 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.IOException;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -68,12 +71,16 @@ public class MapsActivity extends FragmentActivity implements GooglePlayServices
     private LatLng myLocation;
     private Timer getLocations;
     double lat = 0, lon = 0;
-    double lastLat=0, lastLon=0;
+    double lastLat = 0, lastLon = 0;
     int toSoldier = -1;
     AudioPlayer ap;
     int lastMessage = 0;
     int asyncTaskNumber = 0;
     final int MAXASYNCTASKNUMBER = 1;
+    private InetAddress addr;
+    private int numberOfNotReachable = 0;
+    private boolean reachable = true;
+
 
     private static String url_team = Functions.SERVER + "/senior/getTeam.php";
     private static final String TAG_SUCCESS = "success";
@@ -124,6 +131,12 @@ public class MapsActivity extends FragmentActivity implements GooglePlayServices
         if (!gps.canGetLocation())
             gps.showSettingsAlert();
 
+        try {
+            addr = InetAddress.getByName(Functions.domain);
+        } catch (UnknownHostException e) {
+            e.printStackTrace();
+        }
+
         locationList = new HashMap<Integer, Location>();
         //set teamDialog
         teamDialog = new Dialog(this);
@@ -155,8 +168,6 @@ public class MapsActivity extends FragmentActivity implements GooglePlayServices
 
         new FetchMessageList().execute();
 
-        new FetchTeamList().execute(mission.getTeamID() + "");
-
 
         messageButton.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -172,7 +183,7 @@ public class MapsActivity extends FragmentActivity implements GooglePlayServices
                     CameraPosition cameraPosition = new CameraPosition.Builder().target(new LatLng(myLocation.latitude, myLocation.longitude)).zoom(20).build();
                     mMap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
                 }*/
-                if (locationClient!=null && locationClient.isConnected()) {
+                if (locationClient != null && locationClient.isConnected()) {
                     CameraPosition cameraPosition = new CameraPosition.Builder().target(new LatLng(locationClient.getLastLocation().getLatitude(), locationClient.getLastLocation().getLongitude())).zoom(20).build();
                     mMap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
                 }
@@ -200,8 +211,6 @@ public class MapsActivity extends FragmentActivity implements GooglePlayServices
             }
         });
 
-        Log.i("onCreate", "onCreate");
-
     }
 
     @Override
@@ -209,15 +218,14 @@ public class MapsActivity extends FragmentActivity implements GooglePlayServices
         super.onResume();
         //setUpMapIfNeeded();
         int resp = GooglePlayServicesUtil.isGooglePlayServicesAvailable(this);
-        if(resp == ConnectionResult.SUCCESS) {
+        if (resp == ConnectionResult.SUCCESS) {
             locationClient = new LocationClient(this, this, this);
             locationRequest = LocationRequest.create();
             locationRequest.setInterval(2000);
             locationRequest.setFastestInterval(1000);
             locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
             locationClient.connect();
-
-        }else{
+        } else {
             Toast.makeText(this, "Google Play Service Error " + resp, Toast.LENGTH_LONG).show();
         }
 
@@ -229,59 +237,50 @@ public class MapsActivity extends FragmentActivity implements GooglePlayServices
             @Override
             public void run() {
                 android.location.Location ll;
-                if (locationClient!=null && locationClient.isConnected()) {
+                if (locationClient != null && locationClient.isConnected()) {
 
                     ll = locationClient.getLastLocation();
                     lat = ll.getLatitude();
                     lon = ll.getLongitude();
-                 //   Log.w("Can get location", lat + ", "+ lon);
-                 //   Log.w("Accuracy", ll.getAccuracy()+"");
-                    if(asyncTaskNumber<MAXASYNCTASKNUMBER)
-                        if(lastLat==lat)
+                    //   Log.w("Can get location", lat + ", "+ lon);
+                    //   Log.w("Accuracy", ll.getAccuracy()+"");
+                    if (asyncTaskNumber < MAXASYNCTASKNUMBER)
+                        if (lastLat == lat)
                             new MissionSituation().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, mission.getId() + "", Functions.getUser().getId() + "");
                         else
                             new MissionSituation().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, mission.getId() + "", Functions.getUser().getId() + "", lat + "", lon + "", "");
 
                     lastLat = lat;
                     lastLon = lon;
-                }else
-                    if(asyncTaskNumber<MAXASYNCTASKNUMBER)
-                        new MissionSituation().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, mission.getId() + "", Functions.getUser().getId() + "");
+                } else if (asyncTaskNumber < MAXASYNCTASKNUMBER)
+                    new MissionSituation().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, mission.getId() + "", Functions.getUser().getId() + "");
 
                 //new MissionSituation().execute(mission.getId() + "", Functions.getUser().getId() + "", lat + "", lon + "", "");
 
             }
 
-        }, 0, 500);
+        }, 0, 1000);
 
         if (!gps.canGetLocation())
             gps.showSettingsAlert();
 
     }
 
-/*    @Override
-    public void onBackPressed() {
-        Log.w("back","onBackPressed");
+    @Override
+    public void onPause() {
         getLocations.cancel();
         getLocations.purge();
-        super.onBackPressed();
-        MapsActivity.this.finish();
-    }*/
-
-    @Override
-    public void onPause(){
-/*        Log.i("pause", "onPause");
-        getLocations.cancel();
-        getLocations.purge();*/
+        gps.stopUsingGPS();
         super.onPause();
     }
 
     @Override
-    public void onStop(){
+    public void onStop() {
         Log.i("onStop", "onStop");
         getLocations.cancel();
         getLocations.purge();
         gps.stopUsingGPS();
+        locationClient.disconnect();
         super.onStop();
     }
 
@@ -353,14 +352,14 @@ public class MapsActivity extends FragmentActivity implements GooglePlayServices
 
     @Override
     public void onDisconnected() {
-        Log.w("Disconnected","Disconnected");
+        Log.w("Disconnected", "Disconnected");
     }
 
     @Override
     public void onLocationChanged(android.location.Location location) {
-        if(location!=null){
+/*        if(location!=null){
             Log.w("Location Request",  location.getLatitude() + "," + location.getLongitude());
-        }
+        }*/
     }
 
     @Override
@@ -422,39 +421,43 @@ public class MapsActivity extends FragmentActivity implements GooglePlayServices
         }
 
         protected void onPostExecute(String file_url) {
-            //Toast.makeText(MapsActivity.this, "Messages fetched!", Toast.LENGTH_SHORT).show();
-            messageButton.setEnabled(true);
+            if (messageList.size() > 10) {
+                messageButton.setEnabled(true);
 
-            messageDialog = new AlertDialog.Builder(
-                    MapsActivity.this);
-            messageDialog.setIcon(R.drawable.ic_launcher);
-            messageDialog.setTitle("Send Message");
-            final ArrayAdapter<String> arrayAdapter = new ArrayAdapter<String>(
-                    MapsActivity.this,
-                    android.R.layout.select_dialog_singlechoice);
-            for (String s : messageList.values())
-                arrayAdapter.add(s);
-            messageDialog.setNegativeButton("Cancel",
-                    new DialogInterface.OnClickListener() {
+                messageDialog = new AlertDialog.Builder(
+                        MapsActivity.this);
+                messageDialog.setIcon(R.drawable.ic_launcher);
+                messageDialog.setTitle("Send Message");
+                final ArrayAdapter<String> arrayAdapter = new ArrayAdapter<String>(
+                        MapsActivity.this,
+                        android.R.layout.select_dialog_singlechoice);
+                for (String s : messageList.values())
+                    arrayAdapter.add(s);
+                messageDialog.setNegativeButton("Cancel",
+                        new DialogInterface.OnClickListener() {
 
-                        @Override
-                        public void onClick(DialogInterface dialog, int which) {
-                            dialog.dismiss();
-                        }
-                    });
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                dialog.dismiss();
+                            }
+                        });
 
-            messageDialog.setAdapter(arrayAdapter,
-                    new DialogInterface.OnClickListener() {
+                messageDialog.setAdapter(arrayAdapter,
+                        new DialogInterface.OnClickListener() {
 
-                        @Override
-                        public void onClick(DialogInterface dialog, int which) {
-                            new sendMessage().execute(mission.getId() + "", Functions.getUser().getId() + "", toSoldier + "", (which + 1) + "");
-                            toSoldier = -1;
-                            messageDialog.setTitle("Send Message");
-                            if (teamDialog.isShowing())
-                                teamDialog.dismiss();
-                        }
-                    });
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                new sendMessage().execute(mission.getId() + "", Functions.getUser().getId() + "", toSoldier + "", (which + 1) + "");
+                                toSoldier = -1;
+                                messageDialog.setTitle("Send Message");
+                                if (teamDialog.isShowing())
+                                    teamDialog.dismiss();
+                            }
+                        });
+
+                new FetchTeamList().execute(mission.getTeamID() + "");
+            } else
+                this.execute();
         }
     }
 
@@ -482,133 +485,166 @@ public class MapsActivity extends FragmentActivity implements GooglePlayServices
 
     class MissionSituation extends AsyncTask<String, String, String> {
         protected String doInBackground(String... args) {
-            asyncTaskNumber++;
-            Log.i("AsyncTask started. Total in queue :",asyncTaskNumber+"");
-
-            // Building Parameters
-            List<NameValuePair> params = new ArrayList<NameValuePair>();
-            params.add(new BasicNameValuePair("mission_id", args[0]));
-            params.add(new BasicNameValuePair("soldier_id", args[1]));
-            Log.w("args.length",args.length+"");
-            if(args.length>2) {
-                params.add(new BasicNameValuePair("lat", args[2]));
-                params.add(new BasicNameValuePair("lon", args[3]));
-                params.add(new BasicNameValuePair("status", args[4]));
-            }
-
-            JSONObject json = jParser.makeHttpRequest(Functions.SERVER + "/senior/missionLocation.php", "GET", params);
-
-            //Log.d("situation: ", json.toString());
-
             try {
-                int success = json.getInt(TAG_SUCCESS);
-                missionSituation = json.getString("situation");
-                if (json.has("count"))
-                    peopleReady = json.getInt("count");
-                if (json.has("location")) {
-                    fillLocation(json.getJSONArray("location"));
+                if (addr.isReachable(2000)) {
+                    numberOfNotReachable = 0;
+                    //Log.w("reachable",reachable+"");
+                } else {
+                    numberOfNotReachable++;
+                    if (numberOfNotReachable > 5) {
+                        reachable = false;
+                    }
+
                 }
-                if (json.has("enemy")) {
-                    fillEnemyLocation(json.getJSONArray("enemy"));
-                }
-                if (json.has("message")) {
-                    messageJSON = json.getJSONArray("message");
-                }
-            } catch (JSONException e) {
+            } catch (IOException e) {
                 e.printStackTrace();
             }
+            if (reachable) {
+                asyncTaskNumber++;
+                //Log.i("AsyncTask started. Total in queue :",asyncTaskNumber+"");
 
+                // Building Parameters
+                List<NameValuePair> params = new ArrayList<NameValuePair>();
+                params.add(new BasicNameValuePair("mission_id", args[0]));
+                params.add(new BasicNameValuePair("soldier_id", args[1]));
+                //Log.w("args.length",args.length+"");
+                if (args.length > 2) {
+                    params.add(new BasicNameValuePair("lat", args[2]));
+                    params.add(new BasicNameValuePair("lon", args[3]));
+                    params.add(new BasicNameValuePair("status", args[4]));
+                }
 
+                JSONObject json = jParser.makeHttpRequest(Functions.SERVER + "/senior/missionLocation.php", "GET", params);
+
+                //Log.d("situation: ", json.toString());
+
+                try {
+                    int success = json.getInt(TAG_SUCCESS);
+                    missionSituation = json.getString("situation");
+                    if (json.has("count"))
+                        peopleReady = json.getInt("count");
+                    if (json.has("location")) {
+                        fillLocation(json.getJSONArray("location"));
+                    }
+                    if (json.has("enemy")) {
+                        fillEnemyLocation(json.getJSONArray("enemy"));
+                    }
+                    if (json.has("message")) {
+                        messageJSON = json.getJSONArray("message");
+                    }
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+            }
             return null;
         }
 
         protected void onPostExecute(String file_url) {
-            //Toast.makeText(MapsActivity.this,missionSituation,Toast.LENGTH_SHORT).show();
-
-
-            if (missionSituation.equals("NOTACTIVATED")) {
-                readyLabel.setText("");
-                if (mission.getTeamLeaderID() == Functions.getUser().getId()) {
-                    functionalButton.setEnabled(true);
-                    functionalButton.setText("Activate");
-                    functionalButton.setVisibility(View.VISIBLE);
-                    functionalButton.setOnClickListener(new View.OnClickListener() {
-                        @Override
-                        public void onClick(View view) {
-                            new MissionSituation().execute(mission.getId() + "", Functions.getUser().getId() + "", lat + "", lon + "", "ACTIVATE");
-                        }
-                    });
-                } else {
-                    functionalButton.setEnabled(false);
-                    functionalButton.setText("NOT ACTIVATED");
-                }
-            } else if (missionSituation.equals("STARTED")) {
-                readyLabel.setText("");
-                if (mission.getTeamLeaderID() == Functions.getUser().getId()) {
-                    functionalButton.setEnabled(true);
-                    functionalButton.setText("Finish");
-                    functionalButton.setVisibility(View.VISIBLE);
-                    functionalButton.setOnClickListener(new View.OnClickListener() {
-                        @Override
-                        public void onClick(View view) {
-                            new MissionSituation().execute(mission.getId() + "", Functions.getUser().getId() + "", lat + "", lon + "", "END");
-                        }
-                    });
-                } else {
-                    functionalButton.setEnabled(false);
-                    functionalButton.setText("ON GOING");
-                }
-            } else if (missionSituation.equals("ACTIVATED")) {
-                readyLabel.setText(peopleReady + " soldier(s) ready!");
-                functionalButton.setEnabled(true);
-                functionalButton.setText("Ready");
-                functionalButton.setVisibility(View.VISIBLE);
-                functionalButton.setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View view) {
-                        new MissionSituation().execute(mission.getId() + "", Functions.getUser().getId() + "", lat + "", lon + "", "READY");
+            if (reachable) {
+                if (missionSituation.equals("NOTACTIVATED")) {
+                    readyLabel.setText("");
+                    if (mission.getTeamLeaderID() == Functions.getUser().getId()) {
+                        functionalButton.setEnabled(true);
+                        functionalButton.setText("Activate");
+                        functionalButton.setVisibility(View.VISIBLE);
+                        functionalButton.setOnClickListener(new View.OnClickListener() {
+                            @Override
+                            public void onClick(View view) {
+                                new MissionSituation().execute(mission.getId() + "", Functions.getUser().getId() + "", lat + "", lon + "", "ACTIVATE");
+                            }
+                        });
+                    } else {
+                        functionalButton.setEnabled(false);
+                        functionalButton.setText("NOT ACTIVATED");
                     }
-                });
-            } else if (missionSituation.equals("READY")) {
-                readyLabel.setText(peopleReady + " soldier(s) ready!");
-                if (mission.getTeamLeaderID() == Functions.getUser().getId()) {
-                    functionalButton.setText("Start");
+                } else if (missionSituation.equals("STARTED")) {
+                    readyLabel.setText("");
+                    if (mission.getTeamLeaderID() == Functions.getUser().getId()) {
+                        functionalButton.setEnabled(true);
+                        functionalButton.setText("Finish");
+                        functionalButton.setVisibility(View.VISIBLE);
+                        functionalButton.setOnClickListener(new View.OnClickListener() {
+                            @Override
+                            public void onClick(View view) {
+                                new MissionSituation().execute(mission.getId() + "", Functions.getUser().getId() + "", lat + "", lon + "", "END");
+                            }
+                        });
+                    } else {
+                        functionalButton.setEnabled(false);
+                        functionalButton.setText("ON GOING");
+                    }
+                } else if (missionSituation.equals("ACTIVATED")) {
+                    readyLabel.setText(peopleReady + " soldier(s) ready!");
                     functionalButton.setEnabled(true);
+                    functionalButton.setText("Ready");
                     functionalButton.setVisibility(View.VISIBLE);
                     functionalButton.setOnClickListener(new View.OnClickListener() {
                         @Override
                         public void onClick(View view) {
-                            new MissionSituation().execute(mission.getId() + "", Functions.getUser().getId() + "", lat + "", lon + "", "START");
+                            new MissionSituation().execute(mission.getId() + "", Functions.getUser().getId() + "", lat + "", lon + "", "READY");
                         }
                     });
-                } else {
-                    functionalButton.setEnabled(false);
-                    functionalButton.setText("NOT STARTED");
-                }
-            } else if (missionSituation.equals("END")) {
-                readyLabel.setText("");
-                getLocations.cancel();
-                functionalButton.setText("Return Mission List");
-                functionalButton.setVisibility(View.VISIBLE);
-                functionalButton.setEnabled(true);
-                getLocations.purge();
-                getLocations.cancel();
-                //Toast.makeText(getApplicationContext(), "Mission Finished", Toast.LENGTH_SHORT).show();
-                functionalButton.setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View view) {
-                        finish();
+                } else if (missionSituation.equals("READY")) {
+                    readyLabel.setText(peopleReady + " soldier(s) ready!");
+                    if (mission.getTeamLeaderID() == Functions.getUser().getId()) {
+                        functionalButton.setText("Start");
+                        functionalButton.setEnabled(true);
+                        functionalButton.setVisibility(View.VISIBLE);
+                        functionalButton.setOnClickListener(new View.OnClickListener() {
+                            @Override
+                            public void onClick(View view) {
+                                new MissionSituation().execute(mission.getId() + "", Functions.getUser().getId() + "", lat + "", lon + "", "START");
+                            }
+                        });
+                    } else {
+                        functionalButton.setEnabled(false);
+                        functionalButton.setText("NOT STARTED");
                     }
-                });
+                } else if (missionSituation.equals("END")) {
+                    readyLabel.setText("");
+                    getLocations.cancel();
+                    functionalButton.setText("Return Mission List");
+                    functionalButton.setVisibility(View.VISIBLE);
+                    functionalButton.setEnabled(true);
+                    getLocations.purge();
+                    getLocations.cancel();
+                    //Toast.makeText(getApplicationContext(), "Mission Finished", Toast.LENGTH_SHORT).show();
+                    functionalButton.setOnClickListener(new View.OnClickListener() {
+                        @Override
+                        public void onClick(View view) {
+                            finish();
+                        }
+                    });
+                }
+                if (locationList.size() > 0)
+                    showLocations();
+                if (messageJSON != null && messageJSON.length() > 0)
+                    showMessages(messageJSON);
+
+                asyncTaskNumber--;
+            }else{
+                //Log.w("reachable",reachable+"");
+                AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(
+                        MapsActivity.this);
+                alertDialogBuilder.setTitle("Host is NOT reachable!");
+
+                // set dialog message
+                alertDialogBuilder
+                        .setMessage("Please check your network connection!")
+                        .setCancelable(false)
+                        .setIcon(R.drawable.target)
+                        .setNeutralButton("Ok!", new DialogInterface.OnClickListener() {
+                            public void onClick(DialogInterface dialog, int id) {
+                                getLocations.cancel();
+                                getLocations.purge();
+                                locationClient.disconnect();
+                                MapsActivity.this.finish();
+                                dialog.cancel();
+                            }
+                        });
+                alertDialogBuilder.show();
             }
-            if (locationList.size() > 0)
-                showLocations();
-            if (messageJSON != null && messageJSON.length() > 0)
-                showMessages(messageJSON);
-
-            asyncTaskNumber--;
-
-            Log.i("AsyncTask finished. Total in queue :",asyncTaskNumber+"");
+            //Log.i("AsyncTask finished. Total in queue :",asyncTaskNumber+"");
         }
     }
 
@@ -698,7 +734,7 @@ public class MapsActivity extends FragmentActivity implements GooglePlayServices
                     json = locs.getJSONObject(i);
                     //if(locationList.containsKey(json.getInt("soldierID"))){
                     temp = new Location(json.getString("status"), json.getInt("missionID"), json.getInt("soldierID"), json.getDouble("latitude"), json.getDouble("longitude"), json.getString("time"));
-                    if(!locationList.containsKey(temp.getSoldierID()))
+                    if (!locationList.containsKey(temp.getSoldierID()))
                         locationList.put(temp.getSoldierID(), temp);
                     else
                         locationList.get(temp.getSoldierID()).set(temp);
@@ -720,7 +756,7 @@ public class MapsActivity extends FragmentActivity implements GooglePlayServices
                     json = locs.getJSONObject(i);
                     temp = new Location("", json.getInt("missionID"), -1, json.getDouble("latitude"), json.getDouble("longitude"), json.getString("time"));
                     enemyList.put(json.getInt("id"), temp);
-                    Log.d("enemy List: ", temp.getLatitude() + "");
+                    //Log.d("enemy List: ", temp.getLatitude() + "");
                 }
             }
         } catch (JSONException e) {
@@ -736,26 +772,26 @@ public class MapsActivity extends FragmentActivity implements GooglePlayServices
         Location temp;
         //if(teamList!=null)
         //teamlist bo?sa patlar
-        if(teamList!=null)
-        for (int i = 0; i < teamList.size(); i++) {
-            if (locationList.containsKey(teamList.get(i).getId())) {
-                temp = locationList.get(teamList.get(i).getId());
-                if (!marker.containsKey(i)) {
-                    marker.put(i, mMap.addMarker(new MarkerOptions().position(new LatLng(temp.getLatitude(), temp.getLongitude())).title(teamList.get(i).getName()).icon(BitmapDescriptorFactory.fromResource(R.drawable.user_soldier))));
-                    if (teamList.get(i).getId() == Functions.getUser().getId()){
-                        marker.get(i).setIcon(BitmapDescriptorFactory.fromResource(R.drawable.soldier_own));
-                    } else if (mission.getTeamLeaderID() == teamList.get(i).getId())
-                        marker.get(i).setIcon(BitmapDescriptorFactory.fromResource(R.drawable.soldier_teamleader));
+        if (teamList != null)
+            for (int i = 0; i < teamList.size(); i++) {
+                if (locationList.containsKey(teamList.get(i).getId())) {
+                    temp = locationList.get(teamList.get(i).getId());
+                    if (!marker.containsKey(i)) {
+                        marker.put(i, mMap.addMarker(new MarkerOptions().position(new LatLng(temp.getLatitude(), temp.getLongitude())).title(teamList.get(i).getName()).icon(BitmapDescriptorFactory.fromResource(R.drawable.user_soldier))));
+                        if (teamList.get(i).getId() == Functions.getUser().getId()) {
+                            marker.get(i).setIcon(BitmapDescriptorFactory.fromResource(R.drawable.soldier_own));
+                        } else if (mission.getTeamLeaderID() == teamList.get(i).getId())
+                            marker.get(i).setIcon(BitmapDescriptorFactory.fromResource(R.drawable.soldier_teamleader));
 
-                } else {
-                    marker.get(i).setPosition(new LatLng(temp.getLatitude(), temp.getLongitude()));
+                    } else {
+                        marker.get(i).setPosition(new LatLng(temp.getLatitude(), temp.getLongitude()));
 
+                    }
                 }
             }
-        }
         for (int i : enemyList.keySet()) {
             temp = enemyList.get(i);
-            Log.d("Enemy : ", temp.toString());
+            //Log.d("Enemy : ", temp.toString());
             if (!enemyMarker.containsKey(i)) {
                 enemyMarker.put(i, mMap.addMarker(new MarkerOptions().position(new LatLng(temp.getLatitude(), temp.getLongitude())).icon(BitmapDescriptorFactory.fromResource(R.drawable.enemy))));
 

@@ -69,26 +69,12 @@ public class MainActivity extends Activity {
         ap = new AudioPlayer("10.mp3",MainActivity.this);
 
         serial = Settings.Secure.getString(getContentResolver(), Settings.Secure.ANDROID_ID);
-/*
-        Toast.makeText(getApplicationContext(), "ro.serialno : " + serial, Toast.LENGTH_SHORT).show();
-
-   //     if (serial.isEmpty())
-   //         serial = Settings.System.getString(getContentResolver(),Settings.System._ID);
-
-        Toast.makeText(getApplicationContext(), "System._ID : " + Settings.System.getString(getContentResolver(),Settings.System._ID) , Toast.LENGTH_SHORT).show();
-
-        Toast.makeText(getApplicationContext(), "ANDROID._ID : " + Settings.Secure.getString(getContentResolver(), Settings.Secure.ANDROID_ID) , Toast.LENGTH_SHORT).show();
-
-*/
-
-        //Toast.makeText(getApplicationContext(), "Device serial is "+serial, Toast.LENGTH_LONG).show();
 
         missionListViewHeader = new TextView(getApplicationContext());
         missionListViewHeader.setEnabled(false);
         missionListViewHeader.setTextColor(Color.DKGRAY);
         missionListViewHeader.setTextSize(16);
         missionListView.addHeaderView(missionListViewHeader);
-
 
     }
 
@@ -124,31 +110,36 @@ public class MainActivity extends Activity {
             JSONObject json = jParser.makeHttpRequest(url_login, "GET", params);
 
             // Check your log cat for JSON reponse
-            Log.d("user: ", json.toString());
+            if(json!=null) {
+                try {
+                    // Checking for SUCCESS TAG
+                    Log.d("user: ", json.toString());
 
-            try {
-                // Checking for SUCCESS TAG
-                int success = json.getInt(TAG_SUCCESS);
+                    int success = json.getInt(TAG_SUCCESS);
 
-                if (success == 1) {
+                    if (success == 1) {
 
-                    userJSON = json.getJSONArray(TAG_USER);
-                    Functions.setUser(null);
+                        userJSON = json.getJSONArray(TAG_USER);
+                        Functions.setUser(null);
 
-                    if (userJSON.length() == 1) {
-                        JSONObject c = userJSON.getJSONObject(0);
-                        Functions.setUser(new Soldier(c.getInt(TAG_ID), c.getString(TAG_NAME), c.getString(TAG_RANK), c.getString(TAG_SERIAL)));
+                        if (userJSON.length() == 1) {
+                            JSONObject c = userJSON.getJSONObject(0);
+                            Functions.setUser(new Soldier(c.getInt(TAG_ID), c.getString(TAG_NAME), c.getString(TAG_RANK), c.getString(TAG_SERIAL)));
 
-                    } else if (userJSON.length() < 1) {
-                        Log.d("no user with serial!", "");
-                    } else
-                        Log.d("more than one user with this serial!", "");
-                } else {
-                    Log.d("no user with this serial!", "");
+                        } else if (userJSON.length() < 1) {
+                            Log.d("no user with serial!", "");
+                        } else
+                            Log.d("more than one user with this serial!", "");
+                    } else {
+                        Log.d("no user with this serial!", "");
+                    }
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                    //pDialog.dismiss();
                 }
-            } catch (JSONException e) {
-                e.printStackTrace();
-                //pDialog.dismiss();
+            }else {
+                this.cancel(false);
+                new Login().execute(serial);
             }
 
             return null;
@@ -194,7 +185,7 @@ public void showAlertDialog(String title,String context){
     class UserMissionList extends AsyncTask<String, String, String> {
 
         protected String doInBackground(String... args) {
-            Log.w("UserMissionList","Mission List!");
+            //Log.w("UserMissionList","Mission List!");
             missionList.clear();
             // Building Parameters
             List<NameValuePair> params = new ArrayList<NameValuePair>();
@@ -209,7 +200,7 @@ public void showAlertDialog(String title,String context){
             try {
                 // Checking for SUCCESS TAG
                 int success = json.getInt(TAG_SUCCESS);
-                Log.w("Message",json.getString("message"));
+ //               Log.w("Message",json.getString("message"));
                 if (success == 1) {
                     Mission mission;
                     userJSON = json.getJSONArray(TAG_MISSION);
@@ -222,14 +213,6 @@ public void showAlertDialog(String title,String context){
                                 mission.setName(mission.getName()+"(L)");
                             missionList.add(mission);
 
-        /*                    SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
-//format çevirilecek, web servisteki getMission sorgusuna Location parametresi eklenecek ve location tablosuna state kolonu eklenecek!!
-                            try {
-                                Date dd = dateFormat.parse(mission.getTime());
-                            } catch (ParseException e) {
-                                e.printStackTrace();
-                            }
-*/
                             Log.d(mission.toString(),"");
                         }
                     } else
@@ -260,15 +243,13 @@ public void showAlertDialog(String title,String context){
     {
         Mission temp = missionList.get(mPosition);
 
-       ap = new AudioPlayer("6.mp3",MainActivity.this);
+        ap = new AudioPlayer("6.mp3",MainActivity.this);
 
+        Intent intent = new Intent(MainActivity.this, MapsActivity.class);
+        intent.putExtra("mission", temp);
+        startActivity(intent);
 
-                    Intent intent = new Intent(MainActivity.this, MapsActivity.class);
-                    intent.putExtra("mission",temp);
-                    startActivity(intent);
-
-
-                //Toast.makeText(getApplicationContext(), temp.getName() , Toast.LENGTH_SHORT).show();
+        //Toast.makeText(getApplicationContext(), temp.getName() , Toast.LENGTH_SHORT).show();
     }
 
 }

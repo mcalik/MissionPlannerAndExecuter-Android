@@ -13,7 +13,8 @@ import java.io.IOException;
  */
 public class Functions {
     private static Soldier user = new Soldier();
-    public static String SERVER = "http://192.168.0.1";
+    public static String domain = "192.168.0.1";
+    public static String SERVER = "http://"+domain;
 
     public static Soldier getUser() {
         return user;
@@ -46,7 +47,6 @@ public class Functions {
     }
 
     private static boolean executeCommand(){
-        System.out.println(" executeCammand");
         Runtime runtime = Runtime.getRuntime();
         try
         {
