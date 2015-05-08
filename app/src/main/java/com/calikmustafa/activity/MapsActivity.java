@@ -259,11 +259,17 @@ public class MapsActivity extends FragmentActivity implements GooglePlayServices
 
             }
 
-        }, 0, 1000);
+        }, 0, 500);
 
         if (!gps.canGetLocation())
             gps.showSettingsAlert();
 
+    }
+
+    @Override
+    public void onBackPressed(){
+        this.finish();
+        super.onBackPressed();
     }
 
     @Override
@@ -457,7 +463,7 @@ public class MapsActivity extends FragmentActivity implements GooglePlayServices
 
                 new FetchTeamList().execute(mission.getTeamID() + "");
             } else
-                this.execute();
+                new FetchMessageList().execute();
         }
     }
 
@@ -488,10 +494,11 @@ public class MapsActivity extends FragmentActivity implements GooglePlayServices
             try {
                 if (addr.isReachable(2000)) {
                     numberOfNotReachable = 0;
+                    reachable=true;
                     //Log.w("reachable",reachable+"");
                 } else {
                     numberOfNotReachable++;
-                    if (numberOfNotReachable > 5) {
+                    if (numberOfNotReachable > 10) {
                         reachable = false;
                     }
 
@@ -520,6 +527,7 @@ public class MapsActivity extends FragmentActivity implements GooglePlayServices
 
                 try {
                     int success = json.getInt(TAG_SUCCESS);
+                    if(json.has("situation"))
                     missionSituation = json.getString("situation");
                     if (json.has("count"))
                         peopleReady = json.getInt("count");
@@ -540,7 +548,7 @@ public class MapsActivity extends FragmentActivity implements GooglePlayServices
         }
 
         protected void onPostExecute(String file_url) {
-            if (reachable) {
+            if (reachable && missionSituation!= "") {
                 if (missionSituation.equals("NOTACTIVATED")) {
                     readyLabel.setText("");
                     if (mission.getTeamLeaderID() == Functions.getUser().getId()) {

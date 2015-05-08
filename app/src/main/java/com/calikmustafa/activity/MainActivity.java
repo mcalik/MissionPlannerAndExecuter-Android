@@ -95,7 +95,6 @@ public class MainActivity extends Activity {
     @Override
     public void onStop(){
         super.onStop();
-        MainActivity.this.finish();
     }
     class Login extends AsyncTask<String, String, String> {
 
@@ -241,13 +240,16 @@ public void showAlertDialog(String title,String context){
     /*****************  This function used by adapter ****************/
     public void onItemClick(int mPosition)
     {
-        Mission temp = missionList.get(mPosition);
+        if(missionList.size()>mPosition) {
+            Mission temp = missionList.get(mPosition);
 
-        ap = new AudioPlayer("6.mp3",MainActivity.this);
+            ap = new AudioPlayer("6.mp3", MainActivity.this);
 
-        Intent intent = new Intent(MainActivity.this, MapsActivity.class);
-        intent.putExtra("mission", temp);
-        startActivity(intent);
+            Intent intent = new Intent(MainActivity.this, MapsActivity.class);
+            intent.putExtra("mission", temp);
+            startActivity(intent);
+
+        }
 
         //Toast.makeText(getApplicationContext(), temp.getName() , Toast.LENGTH_SHORT).show();
     }
