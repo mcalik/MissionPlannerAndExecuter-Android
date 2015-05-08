@@ -209,7 +209,7 @@ public void showAlertDialog(String title,String context){
             try {
                 // Checking for SUCCESS TAG
                 int success = json.getInt(TAG_SUCCESS);
-
+                Log.w("Message",json.getString("message"));
                 if (success == 1) {
                     Mission mission;
                     userJSON = json.getJSONArray(TAG_MISSION);

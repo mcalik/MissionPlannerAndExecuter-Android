@@ -16,6 +16,7 @@ import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.ListView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.calikmustafa.common.Functions;
 import com.calikmustafa.model.Location;
@@ -27,12 +28,19 @@ import com.calikmustafa.structure.AudioPlayer;
 import com.calikmustafa.structure.GPSTracker;
 import com.calikmustafa.structure.JSONParser;
 import com.calikmustafa.structure.TeamListCustomArrayAdaptor;
+import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.GooglePlayServicesClient;
+import com.google.android.gms.common.GooglePlayServicesUtil;
+import com.google.android.gms.location.LocationClient;
+import com.google.android.gms.location.LocationListener;
+import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 
 import org.apache.http.NameValuePair;
@@ -47,7 +55,7 @@ import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
 
-public class MapsActivity extends FragmentActivity {
+public class MapsActivity extends FragmentActivity implements GooglePlayServicesClient.ConnectionCallbacks, GooglePlayServicesClient.OnConnectionFailedListener, LocationListener {
     JSONParser jParser = new JSONParser();
     JSONArray teamJSON = null;
     JSONArray messageJSON = null;
@@ -55,6 +63,8 @@ public class MapsActivity extends FragmentActivity {
     private String missionSituation = "";
     private int peopleReady = 0;
     private GPSTracker gps;
+    private LocationClient locationClient;
+    private LocationRequest locationRequest;
     private LatLng myLocation;
     private Timer getLocations;
     double lat = 0, lon = 0;
@@ -63,7 +73,7 @@ public class MapsActivity extends FragmentActivity {
     AudioPlayer ap;
     int lastMessage = 0;
     int asyncTaskNumber = 0;
-    final int MAXASYNCTASKNUMBER = 2;
+    final int MAXASYNCTASKNUMBER = 1;
 
     private static String url_team = Functions.SERVER + "/senior/getTeam.php";
     private static final String TAG_SUCCESS = "success";
@@ -86,7 +96,6 @@ public class MapsActivity extends FragmentActivity {
     private GoogleMap mMap;
     private Mission mission;
     private Team team;
-    private Location location;
     private HashMap<Integer, Location> locationList;
     private ArrayList<Soldier> teamList;
     private HashMap<Integer, Location> enemyList;
@@ -111,7 +120,7 @@ public class MapsActivity extends FragmentActivity {
         mission = (Mission) getIntent().getSerializableExtra("mission");
         setContentView(R.layout.activity_maps);
 
-        gps = new GPSTracker(this);
+        gps = new GPSTracker(MapsActivity.this);
         if (!gps.canGetLocation())
             gps.showSettingsAlert();
 
@@ -144,18 +153,11 @@ public class MapsActivity extends FragmentActivity {
         messageButton = (Button) findViewById(R.id.buttonMessage);
         messageButton.setEnabled(false);
 
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                new FetchMessageList().execute();
-            }
-        });
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                new FetchTeamList().execute(mission.getTeamID() + "");
-            }
-        });
+        new FetchMessageList().execute();
+
+        new FetchTeamList().execute(mission.getTeamID() + "");
+
+
         messageButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -166,8 +168,12 @@ public class MapsActivity extends FragmentActivity {
         myLocationButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                if (myLocation != null && myLocation.latitude != 0) {
+                /*if (myLocation != null && myLocation.latitude != 0) {
                     CameraPosition cameraPosition = new CameraPosition.Builder().target(new LatLng(myLocation.latitude, myLocation.longitude)).zoom(20).build();
+                    mMap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
+                }*/
+                if (locationClient!=null && locationClient.isConnected()) {
+                    CameraPosition cameraPosition = new CameraPosition.Builder().target(new LatLng(locationClient.getLastLocation().getLatitude(), locationClient.getLastLocation().getLongitude())).zoom(20).build();
                     mMap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
                 }
             }
@@ -202,16 +208,34 @@ public class MapsActivity extends FragmentActivity {
     protected void onResume() {
         super.onResume();
         //setUpMapIfNeeded();
+        int resp = GooglePlayServicesUtil.isGooglePlayServicesAvailable(this);
+        if(resp == ConnectionResult.SUCCESS) {
+            locationClient = new LocationClient(this, this, this);
+            locationRequest = LocationRequest.create();
+            locationRequest.setInterval(2000);
+            locationRequest.setFastestInterval(1000);
+            locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+            locationClient.connect();
+
+        }else{
+            Toast.makeText(this, "Google Play Service Error " + resp, Toast.LENGTH_LONG).show();
+        }
+
         Log.i("onResume", "onResume");
         asyncTaskNumber = 0;
         getLocations = new Timer();
+
         getLocations.scheduleAtFixedRate(new TimerTask() {
             @Override
             public void run() {
-                double lat = 0, lon = 0;
-                if (myLocation != null) {
-                    lat = myLocation.latitude;
-                    lon = myLocation.longitude;
+                android.location.Location ll;
+                if (locationClient!=null && locationClient.isConnected()) {
+
+                    ll = locationClient.getLastLocation();
+                    lat = ll.getLatitude();
+                    lon = ll.getLongitude();
+                 //   Log.w("Can get location", lat + ", "+ lon);
+                 //   Log.w("Accuracy", ll.getAccuracy()+"");
                     if(asyncTaskNumber<MAXASYNCTASKNUMBER)
                         if(lastLat==lat)
                             new MissionSituation().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, mission.getId() + "", Functions.getUser().getId() + "");
@@ -221,13 +245,14 @@ public class MapsActivity extends FragmentActivity {
                     lastLat = lat;
                     lastLon = lon;
                 }else
-                    new MissionSituation().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, mission.getId() + "", Functions.getUser().getId() + "");
+                    if(asyncTaskNumber<MAXASYNCTASKNUMBER)
+                        new MissionSituation().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, mission.getId() + "", Functions.getUser().getId() + "");
 
                 //new MissionSituation().execute(mission.getId() + "", Functions.getUser().getId() + "", lat + "", lon + "", "");
 
             }
 
-        }, 0, 1000);
+        }, 0, 500);
 
         if (!gps.canGetLocation())
             gps.showSettingsAlert();
@@ -245,39 +270,21 @@ public class MapsActivity extends FragmentActivity {
 
     @Override
     public void onPause(){
-        Log.i("pause", "onPause");
+/*        Log.i("pause", "onPause");
         getLocations.cancel();
-        getLocations.purge();
+        getLocations.purge();*/
         super.onPause();
     }
 
     @Override
     public void onStop(){
-        Log.i("onStop","onStop");
+        Log.i("onStop", "onStop");
         getLocations.cancel();
         getLocations.purge();
-        MapsActivity.this.finish();
+        gps.stopUsingGPS();
         super.onStop();
     }
 
-    private GoogleMap.OnMyLocationChangeListener myLocationChangeListener = new GoogleMap.OnMyLocationChangeListener() {
-        @Override
-        public void onMyLocationChange(android.location.Location location) {
-
-            myLocation = new LatLng(location.getLatitude(), location.getLongitude());
-            //Log.d("location change Listener: ", location.getLatitude() + " " + location.getLongitude());
-/*            if (myLocation != null) {
-                lat = myLocation.latitude;
-                lon = myLocation.longitude;
-                lastLat = lat;
-                lastLon = lon;
-            } else {
-                lat = lastLat;
-                lon = lastLon;
-            }*/
-        }
-
-    };
 
     private void setUpMapIfNeeded() {
         // Do a null check to confirm that we have not already instantiated the map.
@@ -297,11 +304,9 @@ public class MapsActivity extends FragmentActivity {
     private void setUpMap() {
         MarkerOptions m = new MarkerOptions().position(new LatLng(mission.getLatitude(), mission.getLongitude())).title(mission.getName());
         mMap.addMarker(m);
-        mMap.setMyLocationEnabled(true);
         mMap.getUiSettings().setMyLocationButtonEnabled(false);
         mMap.getUiSettings().setRotateGesturesEnabled(true);
         mMap.getUiSettings().setZoomControlsEnabled(false);
-        mMap.setOnMyLocationChangeListener(myLocationChangeListener);
 
         CameraPosition cameraPosition = new CameraPosition.Builder().target(new LatLng(mission.getLatitude(), mission.getLongitude())).zoom(15).build();
         mMap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
@@ -319,6 +324,7 @@ public class MapsActivity extends FragmentActivity {
                 alertDialogBuilder
                         .setMessage("Warn team?")
                         .setCancelable(false)
+                        .setIcon(R.drawable.target)
                         .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
                             public void onClick(DialogInterface dialog, int id) {
                                 new setEnemyLocation().execute(mission.getId() + "", Functions.getUser().getId() + "", ll.latitude + "", ll.longitude + "");
@@ -338,6 +344,28 @@ public class MapsActivity extends FragmentActivity {
 
             }
         });
+    }
+
+    @Override
+    public void onConnected(Bundle bundle) {
+        locationClient.requestLocationUpdates(locationRequest, this);
+    }
+
+    @Override
+    public void onDisconnected() {
+        Log.w("Disconnected","Disconnected");
+    }
+
+    @Override
+    public void onLocationChanged(android.location.Location location) {
+        if(location!=null){
+            Log.w("Location Request",  location.getLatitude() + "," + location.getLongitude());
+        }
+    }
+
+    @Override
+    public void onConnectionFailed(ConnectionResult connectionResult) {
+
     }
 
     class FetchTeamList extends AsyncTask<String, String, String> {
@@ -371,19 +399,6 @@ public class MapsActivity extends FragmentActivity {
 
             Log.i("team fetched ", "team fetched");
 
-/*            teamListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-                @Override
-                public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
-                    Log.i("cektir","");
-
-                    Toast.makeText(MapsActivity.this,teamList.get(i).getName()+" i item clicked",Toast.LENGTH_SHORT);
-                    if(messageDialog!=null){
-                        messageDialog.setTitle("Message to " + teamList.get(i).getName());
-                        toSoldier=teamList.get(i).getId();
-                        messageDialog.show();
-                    }
-                }
-            });*/
         }
     }
 
@@ -683,7 +698,10 @@ public class MapsActivity extends FragmentActivity {
                     json = locs.getJSONObject(i);
                     //if(locationList.containsKey(json.getInt("soldierID"))){
                     temp = new Location(json.getString("status"), json.getInt("missionID"), json.getInt("soldierID"), json.getDouble("latitude"), json.getDouble("longitude"), json.getString("time"));
-                    locationList.put(temp.getSoldierID(), temp);
+                    if(!locationList.containsKey(temp.getSoldierID()))
+                        locationList.put(temp.getSoldierID(), temp);
+                    else
+                        locationList.get(temp.getSoldierID()).set(temp);
                     //}
 
                 }
@@ -711,8 +729,8 @@ public class MapsActivity extends FragmentActivity {
     }
 
 
-    HashMap<Integer, MarkerOptions> marker = new HashMap<Integer, MarkerOptions>();
-    HashMap<Integer, MarkerOptions> enemyMarker = new HashMap<Integer, MarkerOptions>();
+    HashMap<Integer, Marker> marker = new HashMap<Integer, Marker>();
+    HashMap<Integer, Marker> enemyMarker = new HashMap<Integer, Marker>();
 
     void showLocations() {
         Location temp;
@@ -723,16 +741,15 @@ public class MapsActivity extends FragmentActivity {
             if (locationList.containsKey(teamList.get(i).getId())) {
                 temp = locationList.get(teamList.get(i).getId());
                 if (!marker.containsKey(i)) {
-                    marker.put(i, new MarkerOptions().position(new LatLng(temp.getLatitude(), temp.getLongitude())).title(teamList.get(i).getName()).icon(BitmapDescriptorFactory.fromResource(R.drawable.user_soldier)));
+                    marker.put(i, mMap.addMarker(new MarkerOptions().position(new LatLng(temp.getLatitude(), temp.getLongitude())).title(teamList.get(i).getName()).icon(BitmapDescriptorFactory.fromResource(R.drawable.user_soldier))));
+                    if (teamList.get(i).getId() == Functions.getUser().getId()){
+                        marker.get(i).setIcon(BitmapDescriptorFactory.fromResource(R.drawable.soldier_own));
+                    } else if (mission.getTeamLeaderID() == teamList.get(i).getId())
+                        marker.get(i).setIcon(BitmapDescriptorFactory.fromResource(R.drawable.soldier_teamleader));
 
-                    if (teamList.get(i).getId() == Functions.getUser().getId())
-                        marker.get(i).icon(BitmapDescriptorFactory.fromResource(R.drawable.soldier_own));
-                    else if (mission.getTeamLeaderID() == teamList.get(i).getId())
-                        marker.get(i).icon(BitmapDescriptorFactory.fromResource(R.drawable.soldier_teamleader));
-
-                    mMap.addMarker(marker.get(i));
                 } else {
-                    marker.get(i).position(new LatLng(temp.getLatitude(), temp.getLongitude()));
+                    marker.get(i).setPosition(new LatLng(temp.getLatitude(), temp.getLongitude()));
+
                 }
             }
         }
@@ -740,9 +757,8 @@ public class MapsActivity extends FragmentActivity {
             temp = enemyList.get(i);
             Log.d("Enemy : ", temp.toString());
             if (!enemyMarker.containsKey(i)) {
-                enemyMarker.put(i, new MarkerOptions().position(new LatLng(temp.getLatitude(), temp.getLongitude())).icon(BitmapDescriptorFactory.fromResource(R.drawable.enemy)));
+                enemyMarker.put(i, mMap.addMarker(new MarkerOptions().position(new LatLng(temp.getLatitude(), temp.getLongitude())).icon(BitmapDescriptorFactory.fromResource(R.drawable.enemy))));
 
-                mMap.addMarker(enemyMarker.get(i));
             }
         }
     }

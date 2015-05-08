@@ -33,6 +33,15 @@ public class Location  implements Serializable {
         this.time = time;
     }
 
+    public void set(Location location){
+        this.status = location.status;
+        this.missionID = location.missionID;
+        this.soldierID = location.soldierID;
+        this.latitude = location.latitude;
+        this.longitude = location.longitude;
+        this.time = location.time;
+    }
+
     public int getId() {
         return id;
     }
